@@ -7,14 +7,14 @@ import shutil
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-# Desabilita avisos apenas se necessário, mas mantendo o registro
+# Desabilita avisos de certificado SSL para sites governamentais (necessário para a API da ANS)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class ANSIntegration:
-    # Integração robusta com API de Dados Abatidos da ANS com foco em segurança e escalabilidade
+    # Integração robusta com API da ANS focada em integridade de dados e segurança.
     BASE_URL = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
     
     def __init__(self):
@@ -26,6 +26,7 @@ class ANSIntegration:
         self.csv_final = self.output_dir / "consolidado_despesas.csv"
 
     def buscar_trimestres(self):
+        # Define os trimestres alvo para processamento
         return [('2024', '3'), ('2024', '2'), ('2024', '1')]
 
     def baixar_arquivos(self, ano, trimestre):
@@ -34,7 +35,7 @@ class ANSIntegration:
         baixados = []
         
         try:
-            # Validação de Status HTTP
+            # Validação de Status HTTP antes de parsear HTML
             res = requests.get(url_ano, headers=self.headers, verify=False, timeout=30)
             res.raise_for_status() 
             
@@ -47,17 +48,19 @@ class ANSIntegration:
                     local = self.temp_dir / f"{ano}_Q{trimestre}_{href}"
                     logger.info(f"Baixando: {href}")
                     
-                    # Download via streaming para poupar RAM
+                    # Download via Streaming com verificação de chunks (Sugestão Copilot)
                     with requests.get(url_ano + href, headers=self.headers, verify=False, timeout=180, stream=True) as r:
                         r.raise_for_status()
                         with open(local, 'wb') as f:
                             for chunk in r.iter_content(chunk_size=8192):
-                                f.write(chunk)
+                                # Evita chunks vazios de keep-alive
+                                if chunk: 
+                                    f.write(chunk)
                     baixados.append(local)
             return baixados
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erro de rede ao buscar {url_ano}: {e}")
+            logger.error(f"Erro de rede ao acessar a API: {e}")
             return []
 
     def processar_e_salvar_incremental(self, zip_path, ano, trimestre):
@@ -66,12 +69,12 @@ class ANSIntegration:
         
         try:
             with zipfile.ZipFile(zip_path, 'r') as z:
-                # Proteção contra Zip Slip
+                # Proteção contra ataque Zip Slip
                 base_path = extract_path.resolve()
                 for member in z.infolist():
                     member_path = (extract_path / member.filename).resolve()
                     if base_path not in member_path.parents and member_path != base_path:
-                        logger.warning(f"Tentativa de Zip Slip detectada no arquivo {member.filename}. Ignorando.")
+                        logger.warning(f"Caminho inseguro detectado no ZIP: {member.filename}. Ignorando.")
                         continue
                     z.extract(member, extract_path)
                 
@@ -85,24 +88,25 @@ class ANSIntegration:
         except Exception as e:
             logger.error(f"Erro no processamento de {zip_path.name}: {e}")
         finally:
-            # Limpeza de ficheiros temporários após processar cada ZIP
+            # Limpeza rigorosa de temporários
             if extract_path.exists():
                 shutil.rmtree(extract_path)
             if zip_path.exists():
                 zip_path.unlink()
 
     def ler_arquivo_resiliente(self, path, ano, trimestre):
-        # Captura de exceções específicas de parsing
+        # Tipagem explícita para evitar que CNPJs percam zeros à esquerda
         for enc in ['utf-8', 'iso-8859-1', 'cp1252']:
             for sep in [';', ',', '\t']:
                 try:
-                    df = pd.read_csv(path, sep=sep, encoding=enc, on_bad_lines='skip', low_memory=False)
+                    df = pd.read_csv(path, sep=sep, encoding=enc, on_bad_lines='skip', 
+                                    # Lê tudo como string inicialmente 
+                                    low_memory=False, dtype=str) 
                     if len(df.columns) > 1:
                         return self.normalizar(df, ano, trimestre)
                 except (UnicodeDecodeError, pd.errors.ParserError):
                     continue
-                except Exception as e:
-                    logger.debug(f"Erro inesperado ao ler {path.name}: {e}")
+                except Exception:
                     continue
         return pd.DataFrame()
 
@@ -118,7 +122,7 @@ class ANSIntegration:
                 'RazaoSocial': df[col_razao].astype(str).str.strip() if col_razao else "N/A",
                 'Trimestre': str(trimestre).zfill(2),
                 'Ano': str(ano),
-                'ValorDespesas': pd.to_numeric(df[col_valor], errors='coerce')
+                'ValorDespesas': pd.to_numeric(df[col_valor].astype(str).str.replace(',', '.'), errors='coerce')
             })
             
             df_res = df_res.dropna(subset=['CNPJ', 'ValorDespesas'])
@@ -132,49 +136,52 @@ class ANSIntegration:
         return pd.DataFrame()
     
     def aplicar_validacao_duplicados_incremental(self):
-        # Validação de duplicados via chunks (escalável para GBs de dados)
+        # Validação de duplicados via Chunks com Tipagem Estrita
         if not self.csv_final.exists():
             return
             
-        logger.info("Mapeando duplicados incrementalmente...")
+        logger.info("Mapeando duplicados (Processamento em Chunks)...")
         mapa_cnpj_raz = {}
         chunksize = 100000 
         
-        # Mapear relações CNPJ -> Razão Social sem carregar tudo na RAM
-        for chunk in pd.read_csv(self.csv_final, chunksize=chunksize, usecols=['CNPJ', 'RazaoSocial']):
+        # Mapear CNPJ -> Razões com DTYPE str para manter integridade
+        for chunk in pd.read_csv(self.csv_final, chunksize=chunksize, 
+                                usecols=['CNPJ', 'RazaoSocial'], dtype={'CNPJ': str, 'RazaoSocial': str}):
             for cnpj, razao in zip(chunk['CNPJ'], chunk['RazaoSocial']):
                 if pd.isna(cnpj): continue
-                razao_str = str(razao)
                 if cnpj not in mapa_cnpj_raz:
-                    mapa_cnpj_raz[cnpj] = {razao_str}
+                    mapa_cnpj_raz[cnpj] = {str(razao)}
                 else:
-                    mapa_cnpj_raz[cnpj].add(razao_str)
+                    mapa_cnpj_raz[cnpj].add(str(razao))
         
         cnpjs_dup = {cnpj for cnpj, razoes in mapa_cnpj_raz.items() if len(razoes) > 1}
         
         if cnpjs_dup:
-            logger.info(f"Atualizando {len(cnpjs_dup)} CNPJs duplicados no ficheiro final...")
             temp_path = self.csv_final.with_suffix('.tmp')
-            primeiro = True
+            # Limpa resíduos de execuções anteriores
+            if temp_path.exists(): temp_path.unlink() 
             
-            # Reescrever ficheiro final aplicando a marcação
-            for chunk in pd.read_csv(self.csv_final, chunksize=chunksize):
+            logger.info(f"Marcando {len(cnpjs_dup)} CNPJs com múltiplas razões sociais...")
+            primeiro = True
+            for chunk in pd.read_csv(self.csv_final, chunksize=chunksize, dtype={'CNPJ': str}):
                 mask = chunk['CNPJ'].isin(cnpjs_dup)
                 chunk.loc[mask, 'StatusValidacao'] = 'CNPJ_MULTIPLAS_RAZOES'
-                chunk.to_csv(temp_path, mode='a', index=False, header=primeiro, encoding='utf-8')
+                
+                # 'w' no primeiro chunk para garantir arquivo novo, 'a' nos demais
+                modo = 'w' if primeiro else 'a'
+                chunk.to_csv(temp_path, mode=modo, index=False, header=primeiro, encoding='utf-8')
                 primeiro = False
             
             temp_path.replace(self.csv_final)
-            logger.info("Validação de duplicados concluída.")
-    
+
     def gerar_relatorio_final(self):
+        # Geração de relatório detalhado com contagem de status
         if not self.csv_final.exists():
             return
             
-        logger.info("Gerando relatorio.txt...")
+        logger.info("Gerando relatório final...")
         report_path = self.output_dir / "relatorio.txt"
         
-        # Uso de chunks para contar estatísticas (evita ler arquivo inteiro)
         status_counts = {}
         total = 0
         for chunk in pd.read_csv(self.csv_final, chunksize=100000, usecols=['StatusValidacao']):
@@ -193,6 +200,7 @@ class ANSIntegration:
             f.write("Todos os registros com problemas foram MANTIDOS e MARCADOS na coluna 'StatusValidacao'.\n")
 
     def gerar_zip_entrega(self):
+        # Geração do ZIP final de entrega
         if self.csv_final.exists():
             zip_path = self.output_dir / "consolidado_despesas.zip"
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -201,7 +209,8 @@ class ANSIntegration:
         return None
 
     def executar(self):
-        logger.info("PIPELINE TESTE 1 - INTEGRAÇÃO ANS")
+        # Fluxo principal de execução
+        logger.info("INICIANDO PIPELINE TESTE 1")
         if self.csv_final.exists(): self.csv_final.unlink()
         
         for ano, tri in self.buscar_trimestres():
@@ -213,7 +222,8 @@ class ANSIntegration:
         self.gerar_relatorio_final()
         
         entrega = self.gerar_zip_entrega()
-        if entrega: logger.info(f"✓ TESTE 1 CONCLUÍDO! Arquivo: {entrega}")
+        if entrega: logger.info(f"✓ TESTE 1 CONCLUÍDO! Ficheiro gerado em: {entrega}")
 
 if __name__ == "__main__":
     ANSIntegration().executar()
+    
