@@ -47,8 +47,12 @@ pip install -r requirements.txt
 # Executar pipeline completo (necessita do arquivo do Teste 1)
 python main.py
 
-# Ou executar demonstração (gera e processa dados simulados)
+# Ou executar demonstração (gera os dados simulados)
 python demo.py
+
+# Processar os dados da demonstração (Opcional - Requer renomear o arquivo)
+mv output/consolidado_despesas_demo.csv output/consolidado_despesas.csv
+python main.py
 ```
 
 ---
