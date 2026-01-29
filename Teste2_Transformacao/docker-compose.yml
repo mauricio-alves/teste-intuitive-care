@@ -1,0 +1,11 @@
+services:
+  teste2-transformacao:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teste2_transformacao_container
+    command: python main.py
+    volumes:
+      - ./output:/app/output
+      - ./temp:/app/temp
+      - ../Teste1_ANS_Integration/output:/app/input:ro

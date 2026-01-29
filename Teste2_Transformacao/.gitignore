@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Dados temporários
+temp/
+*.log
+
+# Outputs (não versionar dados gerados)
+output/*.csv
+output/*.zip
+output/*.txt
+
+# Manter estrutura da pasta output
+!output/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
