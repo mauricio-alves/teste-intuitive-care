@@ -104,8 +104,13 @@ class ANSIntegration:
                 except (UnicodeDecodeError, pd.errors.ParserError):
                     continue
                 except Exception as e:
-                    if isinstance(e, (KeyboardInterrupt, SystemExit)): raise
+                    # Não silencia interrupções de sistema e registra outros erros
+                    if isinstance(e, (KeyboardInterrupt, SystemExit)): 
+                        raise
+                    logger.warning(f"Erro inesperado ao ler {path} (enc={enc}, sep={sep}): {e}")
                     continue
+        
+        logger.error(f"Falha total ao processar o arquivo: {path}. Verifique se o formato é suportado.")
         return pd.DataFrame()
 
     def normalizar(self, df, ano, trimestre):
