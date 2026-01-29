@@ -6,9 +6,13 @@
 
 Integrar com a API de Dados Abertos da ANS, baixar demonstrações contábeis dos últimos 3 trimestres, processar arquivos de despesas e consolidar em um único CSV.
 
+---
+
 ## 🚀 Execução Rápida
 
 ### Opção 1: Docker (Recomendado)
+
+O projeto utiliza **Hardening de Container**, executando o pipeline com um usuário não-root (`appuser`) para maior segurança.
 
 ```bash
 # Build e execução com API real
@@ -37,83 +41,80 @@ python main.py
 python demo.py
 ```
 
+---
+
 ## 📁 Arquivos Gerados
 
 Após execução, a pasta `output/` contém:
 
-- `consolidado_despesas.csv` - Dados consolidados
-- `consolidado_despesas.zip` - **Arquivo de entrega**
-- `relatorio.txt` - Relatório de inconsistências
+- `consolidado_despesas.csv`: Dados consolidados e normalizados.
+- `consolidado_despesas.zip`: **Arquivo de entrega** compactado.
+- `relatorio.txt`: Relatório automatizado de análise crítica e inconsistências.
+
+---
 
 ## 📊 Estrutura do CSV
 
-```csv
-CNPJ,RazaoSocial,Trimestre,Ano,ValorDespesas,StatusValidacao
-12345678000190,Operadora XYZ,03,2024,150000.50,OK
-98765432000111,MedCare,03,2024,0,VALOR_ZERADO
-```
+| Coluna              | Descrição                                                           |
+| ------------------- | ------------------------------------------------------------------- |
+| **CNPJ**            | Identificador da operadora (ou Registro ANS no Teste 1)             |
+| **RazaoSocial**     | Nome da operadora (marcado como N/A para enriquecimento no Teste 2) |
+| **Trimestre / Ano** | Período de competência do dado                                      |
+| **ValorDespesas**   | Valor financeiro normalizado                                        |
+| **StatusValidacao** | Etiqueta de integridade do registro                                 |
 
-## 🔧 Decisões Técnicas
+---
 
-### Processamento: Incremental
+## 🔧 Decisões Técnicas e Trade-offs
 
-**Por quê?** Não sobrecarrega RAM, funciona com arquivos grandes.
+### 1. Processamento: Streaming & Chunks (Escalabilidade)
 
-### Inconsistências: Manter e Marcar
+Diferente de carregar arquivos inteiros na RAM, o pipeline utiliza **Streaming de Download** e **Processamento em Chunks**.
 
-**Por quê?** Transparência total. Permite auditoria. Dados podem ser corrigidos depois.
+- **Por quê?** Permite processar volumes massivos de dados (Gb) mantendo o consumo de memória estável (~500MB), inclusive durante a validação de duplicados e geração de relatórios.
 
-### Detecção: Automática
+### 2. Segurança: Hardening e Proteção contra Injeção
 
-**Por quê?** Funciona com estruturas variadas. Resiliente a mudanças na API.
+- **Zip Slip Protection**: Validação rigorosa de caminhos durante a extração para evitar escrita de arquivos fora do diretório temporário.
+- **Least Privilege**: O Dockerfile cria um usuário restrito, evitando que a aplicação rode como `root`.
 
-### Código: Simples
+### 3. Resiliência: Captura Granular de Erros
 
-**Por quê?** É um teste de estágio. KISS (Keep It Simple, Stupid).
+O código substitui blocos genéricos por capturas específicas (`RequestException`, `ParserError`, `UnicodeDecodeError`).
 
-### Trade-offs Considerados
+- **Por quê?** Evita falhas silenciosas e fornece logs precisos para depuração de problemas de rede ou encoding da ANS.
 
-| Decisão         | Alternativas                  | Escolha     | Justificativa  |
-| --------------- | ----------------------------- | ----------- | -------------- |
-| Processamento   | Memória vs Incremental        | Incremental | Escalabilidade |
-| Inconsistências | Deletar vs Corrigir vs Marcar | Marcar      | Transparência  |
-| Detecção        | Hardcoded vs Auto vs Config   | Automática  | Resiliente     |
-| Estrutura       | Funções vs OOP vs Módulos     | Classe OOP  | Organização    |
-| Logging         | print vs logging vs Framework | logging     | Profissional   |
+### 4. Higiene de Ambiente
 
-## 🐛 Inconsistências Tratadas
+Implementada a limpeza automática de diretórios e arquivos temporários (`temp/`) imediatamente após o processamento de cada ZIP.
 
-Todos os registros com problemas são **mantidos e marcados** na coluna `StatusValidacao`:
+---
 
-| Status                  | Descrição                       |
-| ----------------------- | ------------------------------- |
-| `OK`                    | Registro válido                 |
-| `CNPJ_INVALIDO`         | CNPJ não tem 14 dígitos         |
-| `CNPJ_MULTIPLAS_RAZOES` | Mesmo CNPJ com nomes diferentes |
-| `VALOR_ZERADO`          | Despesa = 0                     |
-| `VALOR_NEGATIVO`        | Despesa < 0                     |
-| `RAZAO_VAZIA`           | Nome da operadora vazio         |
+## 🐛 Inconsistências Tratadas (Análise Crítica)
 
-## ⏱️ Performance
+Todos os registros com problemas são **mantidos e marcados** na coluna `StatusValidacao` para garantir transparência total e auditabilidade:
 
-- **Tempo (demo):** ~1 segundo
-- **Tempo (API real):** 5-15 minutos
-- **Memória:** ~500MB
-- **Disco:** ~200MB
+| Status                    | Descrição                                          |
+| ------------------------- | -------------------------------------------------- |
+| `OK`                      | Registro íntegro                                   |
+| `CNPJ_INVALIDO`           | Identificador com formato inesperado               |
+| `CNPJ_MULTIPLAS_RAZOES`   | Mesmo identificador vinculado a nomes distintos    |
+| `VALOR_ZERADO / NEGATIVO` | Inconsistências em valores financeiros             |
+| `RAZAO_VAZIA`             | Nome da operadora ausente (comum antes do Teste 2) |
 
-## 📝 Observações
+---
 
-- **demo.py:** Para testes rápidos sem depender da API (dados simulados)
-- **main.py:** Execução real com API da ANS (pode estar lenta/indisponível)
-- **Docker:** `docker-compose up` executa main.py por padrão
-- **Validação:** Todos os registros com problemas são mantidos (não deletados)
-- **Filtros:** Use `StatusValidacao == 'OK'` para dados válidos
+## ⏱️ Performance Realizada
+
+- **Tempo (API real):** ~35 segundos (em ambiente Docker estável).
+- **Registros:** > 1.000.000 de linhas processadas com sucesso.
+- **Estabilidade:** Consumo de memória fixo via processamento incremental.
+
+---
 
 ## 🎯 Tecnologias
 
-- Python 3.11
-- Pandas (manipulação de dados)
-- Requests (HTTP)
-- BeautifulSoup (parsing HTML)
-- Docker (containerização)
-- urllib3 (SSL handling)
+- **Python 3.11** (Slim-Bookworm)
+- **Pandas** (Data Chunks)
+- **BeautifulSoup** (FTP Parsing)
+- **Docker & Docker Compose** (Security Hardened)

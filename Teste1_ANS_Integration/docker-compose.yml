@@ -7,4 +7,3 @@ services:
     command: python main.py
     volumes:
       - ./output:/app/output
-      - ./temp:/app/temp

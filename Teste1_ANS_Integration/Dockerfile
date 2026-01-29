@@ -1,13 +1,15 @@
 FROM python:3.11-slim-bookworm
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
 WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -15,6 +17,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY . .
 
-RUN mkdir -p output temp && chmod 777 output temp
+RUN mkdir -p output temp && \
+    chown -R appuser:appuser /app && \
+    chmod 775 output temp
+
+USER appuser
 
 CMD ["python", "main.py"]
