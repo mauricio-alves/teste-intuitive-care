@@ -10,22 +10,23 @@ print("="*60)
 print("DEMONSTRAÇÃO - TESTE 1")
 print("="*60)
 
-# Gera dados simulados
+# Gera dados simulados incluindo duplicados e valores inválidos
 data = []
 operadoras = [
     ("12345678000190", "Operadora Saúde Plus"),
     ("98765432000111", "MedCare Assistência"),
     ("11223344000155", "Vida Plena Saúde"),
-    ("12345678000190", "Operadora Saúde Plus Ltda"),  # Duplicado
-    ("1234567", "CNPJ Inválido"),  # CNPJ inválido
+    ("12345678000190", "Operadora Saúde Plus Ltda"),  
+    ("1234567", "CNPJ Inválido"),  
 ]
 
 for ano, tri in [('2024', '03'), ('2024', '02'), ('2024', '01')]:
     for cnpj, razao in operadoras:
+        # Gera valores variados entre normal, zerado e negativo
         valor = random.choice([
-            random.uniform(10000, 500000),  # Normal
-            0,  # Zerado
-            -random.uniform(1000, 50000),  # Negativo
+            random.uniform(10000, 500000), 
+            0,  
+            -random.uniform(1000, 50000),  
         ])
         data.append({
             'CNPJ': cnpj,

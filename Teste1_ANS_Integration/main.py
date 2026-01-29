@@ -26,38 +26,41 @@ class ANSIntegration:
 
     def buscar_trimestres(self):
         # Define os trimestres alvo baseados na estrutura do FTP
-        return [('2025', '3'), ('2025', '2'), ('2025', '1')]
+        return [('2024', '3'), ('2024', '2'), ('2024', '1')]
 
     def baixar_arquivos(self, ano, trimestre):
-        # Acessa a pasta do ano e descarrega o ZIP do trimestre correspondente
+        # Acessa a pasta do ano e baixa o ZIP do trimestre correspondente
         url_ano = f"{self.BASE_URL}{ano}/"
-        logger.info(f"Buscando ficheiros em {url_ano}...")
+        logger.info(f"Buscando arquivos em {url_ano}...")
         baixados = []
+        
         try:
             res = requests.get(url_ano, headers=self.headers, verify=False, timeout=30)
             soup = BeautifulSoup(res.text, 'html.parser')
             
-            # Padrão observado: XT202X.zip (ex: 3T2025.zip)
+            # Padrão observado: XT202X.zip (exemplo: 3T2024.zip)
             padrao = f"{trimestre}T{ano}".upper()
             
             for link in soup.find_all('a', href=True):
                 href = link['href']
                 if href.endswith('.zip') and padrao in href.upper():
                     local = self.temp_dir / f"{ano}_Q{trimestre}_{href}"
-                    logger.info(f"Descarregando: {href}")
+                    logger.info(f"Baixando: {href}")
                     
                     file_res = requests.get(url_ano + href, headers=self.headers, verify=False, timeout=180)
                     with open(local, 'wb') as f:
                         f.write(file_res.content)
                     baixados.append(local)
             return baixados
+            
         except Exception as e:
             logger.error(f"Erro no download: {e}")
             return []
 
     def processar_e_salvar_incremental(self, zip_path, ano, trimestre):
-        # Extrai e anexa dados ao CSV final para otimizar memória RAM
+        # Extrai e anexa dados ao CSV final para otimizar uso de memória RAM
         logger.info(f"Processando incrementalmente: {zip_path.name}")
+        
         try:
             with zipfile.ZipFile(zip_path, 'r') as z:
                 extract_path = self.temp_dir / zip_path.stem
@@ -69,6 +72,7 @@ class ANSIntegration:
                         if not df.empty:
                             header = not self.csv_final.exists()
                             df.to_csv(self.csv_final, mode='a', index=False, header=header, encoding='utf-8')
+                            
         except Exception as e:
             logger.error(f"Erro no processamento de {zip_path.name}: {e}")
 
@@ -133,7 +137,7 @@ class ANSIntegration:
         logger.info(f"Validação concluída. CNPJs duplicados encontrados: {len(cnpjs_dup)}")
     
     def gerar_relatorio_final(self):
-        # Gera análise crítica de inconsistências (Requisito 1.3)
+        # Gera análise crítica de inconsistências
         if not self.csv_final.exists():
             return
             
@@ -142,7 +146,9 @@ class ANSIntegration:
         report_path = self.output_dir / "relatorio.txt"
         
         with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("="*60 + "\nRELATÓRIO DE ANÁLISE CRÍTICA - TESTE 1\n" + "="*60 + "\n\n")
+            f.write("="*60 + "\n")
+            f.write("RELATÓRIO DE ANÁLISE CRÍTICA - TESTE 1\n")
+            f.write("="*60 + "\n\n")
             f.write(f"Total de registros consolidados: {len(df)}\n\n")
             
             # Estatísticas por tipo de validação
@@ -172,11 +178,15 @@ class ANSIntegration:
 
     def executar(self):
         # Fluxo principal de execução
-        logger.info("="*60 + "\nPIPELINE TESTE 1\n" + "="*60)
+        logger.info("="*60)
+        logger.info("PIPELINE TESTE 1 - INTEGRAÇÃO COM API DA ANS")
+        logger.info("="*60)
         
+        # Remove arquivo anterior se existir
         if self.csv_final.exists(): 
             self.csv_final.unlink()
         
+        # Busca e processa trimestres
         trimestres = self.buscar_trimestres()
         for ano, tri in trimestres:
             zips = self.baixar_arquivos(ano, tri)
@@ -189,9 +199,10 @@ class ANSIntegration:
         # Gera o relatório antes de compactar
         self.gerar_relatorio_final()
         
+        # Gera arquivo final de entrega
         entrega = self.gerar_zip_entrega()
         if entrega:
-            logger.info(f"\n✓ TESTE 1 CONCLUÍDO! Ficheiro gerado: {entrega}")
+            logger.info(f"\n✓ TESTE 1 CONCLUÍDO! Arquivo gerado: {entrega}")
         else:
             logger.error("Falha ao gerar o consolidado final.")
 
