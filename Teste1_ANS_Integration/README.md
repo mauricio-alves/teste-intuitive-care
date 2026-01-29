@@ -108,15 +108,15 @@ Todos os registros com problemas são **mantidos e marcados** na coluna `StatusV
 
 ## ⏱️ Performance Realizada
 
-- **Tempo (API real):** ~35 segundos (em ambiente Docker estável).
-- **Registros:** > 1.000.000 de linhas processadas com sucesso.
-- **Estabilidade:** Consumo de memória fixo via processamento incremental.
+- **Tempo (API real):** ~11 minutos (processamento completo de 3 trimestres via Docker).
+- **Registros:** > 2.100.000 de linhas processadas e validadas com sucesso.
+- **Estabilidade:** Consumo de memória RAM otimizado e fixo através de processamento incremental (chunks).
 
 ---
 
 ## 🎯 Tecnologias
 
 - **Python 3.11** (Slim-Bookworm)
-- **Pandas** (Data Chunks)
-- **BeautifulSoup** (FTP Parsing)
-- **Docker & Docker Compose** (Security Hardened)
+- **Pandas** (Data Chunks para alta volumetria)
+- **BeautifulSoup** (Parsing de diretórios FTP/HTML)
+- **Docker & Docker Compose** (Security Hardened / Non-root user)
