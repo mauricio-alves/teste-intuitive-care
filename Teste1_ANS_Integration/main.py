@@ -7,14 +7,14 @@ import shutil
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-# Desabilita avisos SSL apenas para a API da ANS
+# Desabilita avisos SSL apenas para a API da ANS (Bypass necessário para endpoints governamentais)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class ANSIntegration:
-    # Pipeline robusto com tratamento numérico pt-BR e resiliência de tipos
+    # Pipeline de integração com tratamento de Registro ANS, CNPJ e segurança Zip-Slip.
     BASE_URL = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
     
     def __init__(self):
@@ -33,16 +33,17 @@ class ANSIntegration:
         }
 
     def buscar_trimestres(self):
-        # Retorna lista de trimestres disponíveis (ano, trimestre)
+        # Retorna uma lista de trimestres disponíveis (ano, trimestre)
         return [('2024', '3'), ('2024', '2'), ('2024', '1')]
 
     def baixar_arquivos(self, ano, trimestre):
-        # Baixa arquivos ZIP do trimestre/ano especificado
+        # Baixa arquivos ZIP do site da ANS para o ano e trimestre especificados
         url_ano = f"{self.BASE_URL}{ano}/"
         logger.info(f"Buscando arquivos em {url_ano}...")
         baixados = []
         
         try:
+            # verify=False é utilizado devido a instabilidades de CA nos endpoints da ANS
             res = requests.get(url_ano, headers=self.headers, verify=False, timeout=30)
             res.raise_for_status() 
             
@@ -67,7 +68,7 @@ class ANSIntegration:
             return []
 
     def processar_e_salvar_incremental(self, zip_path, ano, trimestre):
-        # Processa o ZIP e salva incrementalmente no CSV final
+        # Processa o arquivo ZIP e salva os dados no CSV final de forma incremental
         logger.info(f"Processando incrementalmente: {zip_path.name}")
         extract_path = self.temp_dir / zip_path.stem
         
@@ -76,7 +77,9 @@ class ANSIntegration:
                 base_path = extract_path.resolve()
                 for member in z.infolist():
                     member_path = (extract_path / member.filename).resolve()
+                    # Proteção Zip-Slip com Logging
                     if base_path not in member_path.parents and member_path != base_path:
+                        logger.warning(f"Proteção Zip-Slip: ignorando membro suspeito '{member.filename}'")
                         continue
                     z.extract(member, extract_path)
                 
@@ -91,7 +94,7 @@ class ANSIntegration:
             if zip_path.exists(): zip_path.unlink()
 
     def ler_arquivo_resiliente(self, path, ano, trimestre):
-        # Tenta ler com capturas específicas para evitar falhas silenciosas
+        # Tenta ler o arquivo com várias combinações de encoding e separadores
         for enc in ['utf-8', 'iso-8859-1', 'cp1252']:
             for sep in [';', ',', '\t']:
                 try:
@@ -101,23 +104,19 @@ class ANSIntegration:
                 except (UnicodeDecodeError, pd.errors.ParserError):
                     continue
                 except Exception as e:
-                    # Não silencia interrupções de sistema
                     if isinstance(e, (KeyboardInterrupt, SystemExit)): raise
                     continue
         return pd.DataFrame()
 
     def normalizar(self, df, ano, trimestre):
-        # Normaliza colunas e valida dados
+        # Normaliza o DataFrame para o formato padrão
         df.columns = df.columns.str.strip().str.upper()
-        
         col_cnpj = next((c for c in df.columns if any(x in c for x in ['CNPJ', 'REG_ANS', 'REGISTRO'])), None)
         col_valor = next((c for c in df.columns if any(x in c for x in ['VL_SALDO', 'VALOR', 'DESPESA'])), None)
         col_razao = next((c for c in df.columns if any(x in c for x in ['RAZAO', 'NOME', 'OPERADORA'])), None)
 
         if col_cnpj and col_valor:
             es_cnpj_real = 'CNPJ' in col_cnpj.upper()
-            
-            # Limpeza e conversão robusta (Trata separadores de milhar pt-BR)
             cnpj_limpo = df[col_cnpj].astype(str).str.replace(r'\D', '', regex=True).replace('', pd.NA)
             valor_num = pd.to_numeric(
                 df[col_valor].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False), 
@@ -135,6 +134,7 @@ class ANSIntegration:
             df_res = df_res.dropna(subset=['CNPJ', 'ValorDespesas'])
             df_res['StatusValidacao'] = 'OK'
             
+            # Valida o tamanho apenas se a coluna de origem for um CNPJ real (14 dígitos)
             if es_cnpj_real:
                 df_res.loc[df_res['CNPJ'].str.len() != 14, 'StatusValidacao'] = 'CNPJ_INVALIDO'
             
@@ -146,7 +146,7 @@ class ANSIntegration:
         return pd.DataFrame()
     
     def aplicar_validacao_duplicados_incremental(self):
-        # Valida duplicados de CNPJ com múltiplas RazaoSocial
+        # Aplica validação de CNPJs com múltiplas razões sociais
         if not self.csv_final.exists(): return
         logger.info("Mapeando duplicados com tipagem estrita...")
         
@@ -175,7 +175,7 @@ class ANSIntegration:
             temp_path.replace(self.csv_final)
 
     def gerar_relatorio_final(self):
-        # Gera relatório final de validação
+        # Gera o relatório final de análise crítica
         if not self.csv_final.exists(): return
         logger.info("Gerando relatório final...")
         report_path = self.output_dir / "relatorio.txt"
@@ -196,7 +196,7 @@ class ANSIntegration:
                 f.write(f"  {status}: {count}\n")
 
     def executar(self):
-        # Executa o pipeline completo
+        # Execução do pipeline completo
         logger.info("INICIANDO PIPELINE TESTE 1")
         if self.csv_final.exists(): self.csv_final.unlink()
         for ano, tri in self.buscar_trimestres():
@@ -205,7 +205,6 @@ class ANSIntegration:
                 self.processar_e_salvar_incremental(z, ano, tri)
         self.aplicar_validacao_duplicados_incremental()
         self.gerar_relatorio_final()
-        # Compacta o resultado para entrega
         if self.csv_final.exists():
             zip_out = self.output_dir / "consolidado_despesas.zip"
             with zipfile.ZipFile(zip_out, 'w', zipfile.ZIP_DEFLATED) as zf:
