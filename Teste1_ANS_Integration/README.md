@@ -15,23 +15,17 @@ Integrar com a API de Dados Abertos da ANS, baixar demonstrações contábeis do
 pip install -r requirements.txt
 
 # Executar demonstração (dados simulados)
-python demo.py
+py demo.py
 
 # Ou executar com API real
-python main.py
+py main.py
 ```
 
-### Opção 2: Docker
+### Opção 2: Docker (Recomendado)
 
 ```bash
-# Build
-docker build -t ans-integration .
-
-# Executar demonstração
-docker run -v $(pwd)/output:/app/output ans-integration python demo.py
-
-# Executar com API real
-docker run -v $(pwd)/output:/app/output ans-integration
+# Build e execução automática com Docker Compose
+docker-compose up --build
 ```
 
 ## 📁 Arquivos Gerados
@@ -53,29 +47,43 @@ CNPJ,RazaoSocial,Trimestre,Ano,ValorDespesas,StatusValidacao
 ## 🔧 Decisões Técnicas
 
 ### Processamento: Incremental
+
 **Por quê?** Não sobrecarrega RAM, funciona com arquivos grandes.
 
 ### Inconsistências: Manter e Marcar
+
 **Por quê?** Transparência total. Permite auditoria. Dados podem ser corrigidos depois.
 
 ### Detecção: Automática
+
 **Por quê?** Funciona com estruturas variadas. Resiliente a mudanças na API.
 
 ### Código: Simples
+
 **Por quê?** É um teste de estágio. KISS (Keep It Simple, Stupid).
+
+### Trade-offs Considerados
+
+| Decisão         | Alternativas                  | Escolha     | Justificativa  |
+| --------------- | ----------------------------- | ----------- | -------------- |
+| Processamento   | Memória vs Incremental        | Incremental | Escalabilidade |
+| Inconsistências | Deletar vs Corrigir vs Marcar | Marcar      | Transparência  |
+| Detecção        | Hardcoded vs Auto vs Config   | Automática  | Resiliente     |
+| Estrutura       | Funções vs OOP vs Módulos     | Classe OOP  | Organização    |
+| Logging         | print vs logging vs Framework | logging     | Profissional   |
 
 ## 🐛 Inconsistências Tratadas
 
 Todos os registros com problemas são **mantidos e marcados** na coluna `StatusValidacao`:
 
-| Status | Descrição |
-|--------|-----------|
-| `OK` | Registro válido |
-| `CNPJ_INVALIDO` | CNPJ não tem 14 dígitos |
+| Status                  | Descrição                       |
+| ----------------------- | ------------------------------- |
+| `OK`                    | Registro válido                 |
+| `CNPJ_INVALIDO`         | CNPJ não tem 14 dígitos         |
 | `CNPJ_MULTIPLAS_RAZOES` | Mesmo CNPJ com nomes diferentes |
-| `VALOR_ZERADO` | Despesa = 0 |
-| `VALOR_NEGATIVO` | Despesa < 0 |
-| `RAZAO_VAZIA` | Nome da operadora vazio |
+| `VALOR_ZERADO`          | Despesa = 0                     |
+| `VALOR_NEGATIVO`        | Despesa < 0                     |
+| `RAZAO_VAZIA`           | Nome da operadora vazio         |
 
 ## ⏱️ Performance
 
@@ -97,7 +105,3 @@ Todos os registros com problemas são **mantidos e marcados** na coluna `StatusV
 - Requests (HTTP)
 - BeautifulSoup (parsing HTML)
 - Docker (containerização)
-
----
-
-**Desenvolvido para Intuitive Care** 🚀

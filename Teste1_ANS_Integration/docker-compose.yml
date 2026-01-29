@@ -1,0 +1,9 @@
+services:
+  ans-integration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ans_integration_container
+    volumes:
+      - ./output:/app/output
+      - ./temp:/app/temp

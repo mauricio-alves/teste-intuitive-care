@@ -1,8 +1,3 @@
-"""
-Demonstração - Teste 1
-Gera dados simulados para testar o código sem depender da API
-"""
-
 import pandas as pd
 import zipfile
 import random
