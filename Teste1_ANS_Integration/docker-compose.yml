@@ -1,0 +1,9 @@
+services:
+  ans-integration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ans_integration_container
+    command: python main.py
+    volumes:
+      - ./output:/app/output
