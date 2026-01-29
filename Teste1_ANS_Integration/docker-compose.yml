@@ -5,6 +5,5 @@ services:
       dockerfile: Dockerfile
     container_name: ans_integration_container
     command: python main.py
-    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./output:/app/output

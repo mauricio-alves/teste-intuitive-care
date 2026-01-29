@@ -18,7 +18,7 @@ COPY . .
 
 RUN mkdir -p output temp && \
     chown -R appuser:appuser /app && \
-    chmod 775 output temp
+    chmod 775 /app
 
 USER appuser
 
