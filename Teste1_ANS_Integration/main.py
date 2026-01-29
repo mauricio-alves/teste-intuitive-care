@@ -101,9 +101,36 @@ class ANSIntegration:
                 'Ano': str(ano),
                 'ValorDespesas': pd.to_numeric(df[col_valor], errors='coerce')
             })
+            
             # Remove nulos para garantir a qualidade do consolidado
-            return df_res.dropna(subset=['CNPJ', 'ValorDespesas'])
+            df_res = df_res.dropna(subset=['CNPJ', 'ValorDespesas'])
+            
+            # Adiciona validações (conforme especificação do teste)
+            df_res['StatusValidacao'] = 'OK'
+            df_res.loc[df_res['CNPJ'].str.len() != 14, 'StatusValidacao'] = 'CNPJ_INVALIDO'
+            df_res.loc[df_res['ValorDespesas'] == 0, 'StatusValidacao'] = 'VALOR_ZERADO'
+            df_res.loc[df_res['ValorDespesas'] < 0, 'StatusValidacao'] = 'VALOR_NEGATIVO'
+            df_res.loc[df_res['RazaoSocial'].isin(['N/A', '', 'nan']), 'StatusValidacao'] = 'RAZAO_VAZIA'
+            
+            return df_res
         return pd.DataFrame()
+    
+    def aplicar_validacao_duplicados(self):
+        # Valida CNPJs duplicados após consolidação completa
+        if not self.csv_final.exists():
+            return
+            
+        logger.info("Aplicando validação de CNPJs duplicados...")
+        df = pd.read_csv(self.csv_final)
+        
+        # Identifica CNPJs com múltiplas razões sociais
+        duplicados = df.groupby('CNPJ')['RazaoSocial'].nunique()
+        cnpjs_dup = duplicados[duplicados > 1].index
+        df.loc[df['CNPJ'].isin(cnpjs_dup), 'StatusValidacao'] = 'CNPJ_MULTIPLAS_RAZOES'
+        
+        # Salva com validação atualizada
+        df.to_csv(self.csv_final, index=False, encoding='utf-8')
+        logger.info(f"Validação concluída. CNPJs duplicados encontrados: {len(cnpjs_dup)}")
     
     def gerar_relatorio_final(self):
         # Gera análise crítica de inconsistências (Requisito 1.3)
@@ -116,13 +143,21 @@ class ANSIntegration:
         
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write("="*60 + "\nRELATÓRIO DE ANÁLISE CRÍTICA - TESTE 1\n" + "="*60 + "\n\n")
-            f.write(f"Total de registros consolidados: {len(df)}\n")
-            f.write(f"Valores zerados encontrados: {len(df[df['ValorDespesas'] == 0])}\n")
-            f.write(f"Valores negativos encontrados: {len(df[df['ValorDespesas'] < 0])}\n")
+            f.write(f"Total de registros consolidados: {len(df)}\n\n")
             
-            # Verificação de CNPJs (Registro ANS) duplicados com nomes diferentes
-            dups = df.groupby('CNPJ')['RazaoSocial'].nunique()
-            f.write(f"CNPJs com múltiplas razões sociais: {len(dups[dups > 1])}\n")
+            # Estatísticas por tipo de validação
+            f.write("INCONSISTÊNCIAS ENCONTRADAS:\n")
+            f.write("-" * 60 + "\n")
+            validacao_counts = df['StatusValidacao'].value_counts()
+            for status, count in validacao_counts.items():
+                f.write(f"  {status}: {count}\n")
+            
+            f.write("\n" + "="*60 + "\n")
+            f.write("TRATAMENTO APLICADO:\n")
+            f.write("-" * 60 + "\n")
+            f.write("Todos os registros com problemas foram MANTIDOS e MARCADOS\n")
+            f.write("na coluna 'StatusValidacao' para transparência e auditoria.\n\n")
+            f.write("Filtre por StatusValidacao == 'OK' para dados válidos.\n")
             
         logger.info(f"Relatório gerado com sucesso em: {report_path}")
 
@@ -139,13 +174,17 @@ class ANSIntegration:
         # Fluxo principal de execução
         logger.info("="*60 + "\nPIPELINE TESTE 1\n" + "="*60)
         
-        if self.csv_final.exists(): self.csv_final.unlink()
+        if self.csv_final.exists(): 
+            self.csv_final.unlink()
         
         trimestres = self.buscar_trimestres()
         for ano, tri in trimestres:
             zips = self.baixar_arquivos(ano, tri)
             for z in zips:
                 self.processar_e_salvar_incremental(z, ano, tri)
+        
+        # Aplica validação de duplicados após consolidação
+        self.aplicar_validacao_duplicados()
         
         # Gera o relatório antes de compactar
         self.gerar_relatorio_final()

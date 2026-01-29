@@ -8,24 +8,33 @@ Integrar com a API de Dados Abertos da ANS, baixar demonstrações contábeis do
 
 ## 🚀 Execução Rápida
 
-### Opção 1: Python Local
+### Opção 1: Docker (Recomendado)
+
+```bash
+# Build e execução com API real
+docker-compose up --build
+
+# Ou build manual
+docker build -t teste1-ans .
+
+# Executar com API real
+docker run -v ${PWD}/output:/app/output teste1-ans
+
+# Executar demonstração (dados simulados)
+docker run -v ${PWD}/output:/app/output teste1-ans python demo.py
+```
+
+### Opção 2: Python Local
 
 ```bash
 # Instalar dependências
 pip install -r requirements.txt
 
-# Executar demonstração (dados simulados)
-py demo.py
+# Executar com API real
+python main.py
 
-# Ou executar com API real
-py main.py
-```
-
-### Opção 2: Docker (Recomendado)
-
-```bash
-# Build e execução automática com Docker Compose
-docker-compose up --build
+# Ou executar demonstração (dados simulados)
+python demo.py
 ```
 
 ## 📁 Arquivos Gerados
@@ -87,16 +96,18 @@ Todos os registros com problemas são **mantidos e marcados** na coluna `StatusV
 
 ## ⏱️ Performance
 
-- **Tempo:** 5-15 minutos
+- **Tempo (demo):** ~1 segundo
+- **Tempo (API real):** 5-15 minutos
 - **Memória:** ~500MB
 - **Disco:** ~200MB
 
 ## 📝 Observações
 
-- Use `demo.py` para testar rapidamente sem depender da API
-- A API da ANS pode estar lenta ou indisponível
-- Todos os registros com problemas são mantidos (não deletados)
-- Filtre por `StatusValidacao == 'OK'` para dados válidos
+- **demo.py:** Para testes rápidos sem depender da API (dados simulados)
+- **main.py:** Execução real com API da ANS (pode estar lenta/indisponível)
+- **Docker:** `docker-compose up` executa main.py por padrão
+- **Validação:** Todos os registros com problemas são mantidos (não deletados)
+- **Filtros:** Use `StatusValidacao == 'OK'` para dados válidos
 
 ## 🎯 Tecnologias
 
@@ -105,3 +116,4 @@ Todos os registros com problemas são **mantidos e marcados** na coluna `StatusV
 - Requests (HTTP)
 - BeautifulSoup (parsing HTML)
 - Docker (containerização)
+- urllib3 (SSL handling)
