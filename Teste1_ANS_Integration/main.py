@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class ANSIntegration:
-    # Pipeline robusto com distinção entre Registro ANS e CNPJ
+    # Pipeline robusto com tratamento numérico pt-BR e resiliência de tipos
     BASE_URL = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
     
     def __init__(self):
@@ -24,7 +24,6 @@ class ANSIntegration:
         self.temp_dir.mkdir(exist_ok=True)
         self.headers = {'User-Agent': 'Mozilla/5.0'}
         self.csv_final = self.output_dir / "consolidado_despesas.csv"
-        # Tipagem estrita para garantir integridade em todas as leituras/escritas
         self.dtypes = {
             'CNPJ': str, 
             'RazaoSocial': str, 
@@ -34,11 +33,11 @@ class ANSIntegration:
         }
 
     def buscar_trimestres(self):
-        # Retorna trimestres fixos para simplificação
+        # Retorna lista de trimestres disponíveis (ano, trimestre)
         return [('2024', '3'), ('2024', '2'), ('2024', '1')]
 
     def baixar_arquivos(self, ano, trimestre):
-        # Baixa arquivos ZIP do trimestre e ano especificados
+        # Baixa arquivos ZIP do trimestre/ano especificado
         url_ano = f"{self.BASE_URL}{ano}/"
         logger.info(f"Buscando arquivos em {url_ano}...")
         baixados = []
@@ -68,7 +67,7 @@ class ANSIntegration:
             return []
 
     def processar_e_salvar_incremental(self, zip_path, ano, trimestre):
-        # Processa o arquivo ZIP e salva incrementalmente no CSV final
+        # Processa o ZIP e salva incrementalmente no CSV final
         logger.info(f"Processando incrementalmente: {zip_path.name}")
         extract_path = self.temp_dir / zip_path.stem
         
@@ -92,18 +91,23 @@ class ANSIntegration:
             if zip_path.exists(): zip_path.unlink()
 
     def ler_arquivo_resiliente(self, path, ano, trimestre):
-        # Tenta ler o arquivo com várias combinações de encoding e separadores
+        # Tenta ler com capturas específicas para evitar falhas silenciosas
         for enc in ['utf-8', 'iso-8859-1', 'cp1252']:
             for sep in [';', ',', '\t']:
                 try:
                     df = pd.read_csv(path, sep=sep, encoding=enc, on_bad_lines='skip', low_memory=False, dtype=str)
                     if len(df.columns) > 1:
                         return self.normalizar(df, ano, trimestre)
-                except: continue
+                except (UnicodeDecodeError, pd.errors.ParserError):
+                    continue
+                except Exception as e:
+                    # Não silencia interrupções de sistema
+                    if isinstance(e, (KeyboardInterrupt, SystemExit)): raise
+                    continue
         return pd.DataFrame()
 
     def normalizar(self, df, ano, trimestre):
-        # Normaliza colunas e aplica validações
+        # Normaliza colunas e valida dados
         df.columns = df.columns.str.strip().str.upper()
         
         col_cnpj = next((c for c in df.columns if any(x in c for x in ['CNPJ', 'REG_ANS', 'REGISTRO'])), None)
@@ -111,21 +115,26 @@ class ANSIntegration:
         col_razao = next((c for c in df.columns if any(x in c for x in ['RAZAO', 'NOME', 'OPERADORA'])), None)
 
         if col_cnpj and col_valor:
-            # Identifica se a fonte é Registro ANS ou CNPJ real
             es_cnpj_real = 'CNPJ' in col_cnpj.upper()
             
+            # Limpeza e conversão robusta (Trata separadores de milhar pt-BR)
+            cnpj_limpo = df[col_cnpj].astype(str).str.replace(r'\D', '', regex=True).replace('', pd.NA)
+            valor_num = pd.to_numeric(
+                df[col_valor].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False), 
+                errors='coerce'
+            )
+
             df_res = pd.DataFrame({
-                'CNPJ': df[col_cnpj].astype(str).str.replace(r'\D', '', regex=True),
+                'CNPJ': cnpj_limpo,
                 'RazaoSocial': df[col_razao].astype(str).str.strip() if col_razao else "N/A",
                 'Trimestre': str(trimestre).zfill(2),
                 'Ano': str(ano),
-                'ValorDespesas': pd.to_numeric(df[col_valor].astype(str).str.replace(',', '.'), errors='coerce')
+                'ValorDespesas': valor_num
             })
             
             df_res = df_res.dropna(subset=['CNPJ', 'ValorDespesas'])
             df_res['StatusValidacao'] = 'OK'
             
-            # Valida o tamanho apenas se a coluna de origem for um CNPJ real (14 dígitos)
             if es_cnpj_real:
                 df_res.loc[df_res['CNPJ'].str.len() != 14, 'StatusValidacao'] = 'CNPJ_INVALIDO'
             
@@ -137,14 +146,13 @@ class ANSIntegration:
         return pd.DataFrame()
     
     def aplicar_validacao_duplicados_incremental(self):
-        # Aplica validação de CNPJ com múltiplas razões sociais
+        # Valida duplicados de CNPJ com múltiplas RazaoSocial
         if not self.csv_final.exists(): return
         logger.info("Mapeando duplicados com tipagem estrita...")
         
         mapa_cnpj_raz = {}
         chunksize = 100000 
         
-        # Mapear mantendo tipos string para evitar perda de zeros à esquerda
         for chunk in pd.read_csv(self.csv_final, chunksize=chunksize, usecols=['CNPJ', 'RazaoSocial'], dtype=str):
             for cnpj, razao in zip(chunk['CNPJ'], chunk['RazaoSocial']):
                 if pd.isna(cnpj): continue
@@ -158,7 +166,6 @@ class ANSIntegration:
         if cnpjs_dup:
             temp_path = self.csv_final.with_suffix('.tmp')
             primeiro = True
-            # Reescrever garantindo que todas as colunas mantenham o tipo original
             for chunk in pd.read_csv(self.csv_final, chunksize=chunksize, dtype=self.dtypes):
                 mask = chunk['CNPJ'].isin(cnpjs_dup)
                 chunk.loc[mask, 'StatusValidacao'] = 'CNPJ_MULTIPLAS_RAZOES'
@@ -168,7 +175,7 @@ class ANSIntegration:
             temp_path.replace(self.csv_final)
 
     def gerar_relatorio_final(self):
-        # Gera relatório final de inconsistências
+        # Gera relatório final de validação
         if not self.csv_final.exists(): return
         logger.info("Gerando relatório final...")
         report_path = self.output_dir / "relatorio.txt"
@@ -188,15 +195,6 @@ class ANSIntegration:
             for status, count in status_counts.items():
                 f.write(f"  {status}: {count}\n")
 
-    def gerar_zip_entrega(self):
-        # Gera arquivo ZIP para entrega final
-        if self.csv_final.exists():
-            zip_path = self.output_dir / "consolidado_despesas.zip"
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(self.csv_final, self.csv_final.name)
-            return zip_path
-        return None
-
     def executar(self):
         # Executa o pipeline completo
         logger.info("INICIANDO PIPELINE TESTE 1")
@@ -207,7 +205,12 @@ class ANSIntegration:
                 self.processar_e_salvar_incremental(z, ano, tri)
         self.aplicar_validacao_duplicados_incremental()
         self.gerar_relatorio_final()
-        self.gerar_zip_entrega()
+        # Compacta o resultado para entrega
+        if self.csv_final.exists():
+            zip_out = self.output_dir / "consolidado_despesas.zip"
+            with zipfile.ZipFile(zip_out, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.write(self.csv_final, self.csv_final.name)
 
 if __name__ == "__main__":
     ANSIntegration().executar()
+    
