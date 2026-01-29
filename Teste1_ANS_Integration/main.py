@@ -53,8 +53,17 @@ class ANSIntegration:
             for link in soup.find_all('a', href=True):
                 href = link['href']
                 if href.endswith('.zip') and padrao in href.upper():
-                    local = self.temp_dir / f"{ano}_Q{trimestre}_{href}"
-                    logger.info(f"Baixando: {href}")
+                    # Proteção contra Path Traversal: extrai apenas o nome base do arquivo
+                    safe_name = Path(href).name
+                    local = (self.temp_dir / f"{ano}_Q{trimestre}_{safe_name}").resolve()
+                    
+                    # Valida se o caminho resolvido permanece dentro de temp_dir
+                    temp_root = self.temp_dir.resolve()
+                    if temp_root != local and temp_root not in local.parents:
+                        logger.warning(f"Ignorando caminho potencialmente inseguro em href: {href}")
+                        continue
+
+                    logger.info(f"Baixando: {safe_name}")
                     
                     with requests.get(url_ano + href, headers=self.headers, verify=False, timeout=180, stream=True) as r:
                         r.raise_for_status()
