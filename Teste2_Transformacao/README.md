@@ -14,11 +14,11 @@ Validar, enriquecer e agregar os dados consolidados do Teste 1. O pipeline aplic
 
 O Teste 2 depende do arquivo `consolidado_despesas.csv` gerado no Teste 1. O Docker Compose está configurado para ler este arquivo automaticamente através de volumes montados.
 
-### 🛡️ Hardening e Segurança de Container
+### Opção 1: Docker (Recomendado)
+
+#### 🛡️ Hardening e Segurança de Container
 
 O projeto utiliza **Hardening de Container**, garantindo que o pipeline seja executado como usuário **não-root**. A imagem define um usuário interno restrito (`appuser`). Caso o ambiente de execução exija (como em servidores Linux), a configuração pode ser complementada no `docker-compose.yml` com a instrução `user: "${UID}:${GID}"`, mantendo a execução sem privilégios elevados e garantindo a compatibilidade de permissões com o sistema hospedeiro.
-
-### Opção 1: Docker (Recomendado)
 
 ```bash
 # Build e execução do pipeline completo
