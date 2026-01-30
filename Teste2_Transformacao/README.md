@@ -65,7 +65,7 @@ Após a execução, a pasta `output/` conterá:
 - `dados_enriquecidos.csv`: Base consolidada com colunas adicionais (`RegistroANS`, `Modalidade`, `UF`).
 - `despesas_agregadas.csv`: **Arquivo principal de entrega** - Agrupado por operadora/UF com métricas financeiras.
 - `relatorio_teste2.txt`: Relatório técnico com estatísticas de integridade e performance.
-- `Teste2_Transformacao.zip`: Pacote compactado contendo todos os artefatos de saída.
+- `Teste_Mauricio_Alves.zip`: Pacote compactado contendo todos os artefatos de saída.
 
 ---
 

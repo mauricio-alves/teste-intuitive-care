@@ -1,3 +1,5 @@
+import os
+from urllib.parse import urljoin
 import zipfile
 import logging
 import requests
@@ -33,7 +35,7 @@ class DataTransformation:
     
     def calcular_digito_verificador_cnpj(self, cnpj_base):
         # Calcula os dígitos verificadores do CNPJ usando algoritmo da Receita Federal
-        if len(cnpj_base) != 12:
+        if len(cnpj_base) != 12 or not str(cnpj_base).isdigit():
             return None
             
         def obter_digito(base, multiplicadores):
@@ -84,6 +86,11 @@ class DataTransformation:
         logger.info("Aplicando validações de dados...")
         
         df = df.copy()
+
+        # Verifica colunas obrigatórias
+        cols_obrigatorias = ['CNPJ', 'RazaoSocial', 'ValorDespesas']
+        if not all(c in df.columns for c in cols_obrigatorias):
+            raise KeyError(f"Colunas obrigatórias ausentes: {cols_obrigatorias}")
         
         # Otimização: colunas de baixa cardinalidade como categoria
         for col in ['Trimestre', 'Ano']:
@@ -127,7 +134,7 @@ class DataTransformation:
                 for link in soup.find_all('a', href=True):
                     href = link['href']
                     if href.endswith('.csv'):
-                        csv_files.append(url_base + href)
+                        csv_files.append(urljoin(url_base, href))
                 
                 if csv_files:
                     # Pega o arquivo mais recente (último na lista)
@@ -163,7 +170,7 @@ class DataTransformation:
                         logger.info(f"Cadastro lido: {len(df)} registros, {len(df.columns)} colunas")
                         logger.info(f"Colunas disponíveis: {', '.join(df.columns[:10].tolist())}...")
                         return df
-                except:
+                except Exception:
                     continue
         
         raise Exception("Não foi possível ler o arquivo cadastral")
@@ -352,10 +359,23 @@ class DataTransformation:
         logger.info("TESTE 2 - TRANSFORMAÇÃO E VALIDAÇÃO DE DADOS")
         logger.info("="*60)
         
-        # Carrega consolidado do Teste 1
+        # Carrega consolidado do Teste 1 e valida existência do arquivo CSV
         logger.info(f"Carregando: {self.csv_consolidado}")
-        df = pd.read_csv(self.csv_consolidado, dtype={'CNPJ': str, 'RazaoSocial': str})
-        logger.info(f"Registros carregados: {len(df)}")
+        try:
+            df = pd.read_csv(self.csv_consolidado, dtype={'CNPJ': str, 'RazaoSocial': str})
+            logger.info(f"Registros carregados: {len(df)}")
+        except FileNotFoundError as e:
+            logger.error(f"Arquivo CSV não encontrado: {self.csv_consolidado} - Detalhes: {e}")
+            return
+        except pd.errors.ParserError as e:
+            logger.error(f"Erro ao interpretar o arquivo CSV '{self.csv_consolidado}': {e}")
+            return
+        except UnicodeDecodeError as e:
+            logger.error(f"Erro de codificação ao ler o arquivo CSV '{self.csv_consolidado}': {e}")
+            return
+        except Exception as e:
+            logger.error(f"Erro inesperado ao ler o arquivo CSV '{self.csv_consolidado}': {e}")
+            return
         
         # Validação
         df_validado = self.validar_dados(df)
@@ -437,9 +457,7 @@ class DataTransformation:
         logger.info(f"✓ Arquivos compactados: {zip_path}")
 
 if __name__ == "__main__":
-    # Define caminho do CSV consolidado
-    import os
-    
+    # Define caminho do CSV consolidado    
     if os.path.exists('/app/input/consolidado_despesas.csv'):
         csv_path = '/app/input/consolidado_despesas.csv'
     elif os.path.exists('../Teste1_ANS_Integration/output/consolidado_despesas.csv'):
