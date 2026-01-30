@@ -1,0 +1,77 @@
+SET client_encoding = 'UTF8';
+
+\echo '============================================================'
+\echo 'QUERIES ANALÍTICAS - RELATÓRIO FINAL'
+\echo '============================================================'
+
+-- QUERY 1: Crescimento (Fix: operadora_id no JOIN)
+\echo ''
+\echo 'QUERY 1: Top 5 Operadoras com Maior Crescimento (Início vs Fim de 2024)'
+WITH limites AS (
+    SELECT operadora_id, MIN(ano*10+trimestre) as min_p, MAX(ano*10+trimestre) as max_p
+    FROM despesas_consolidadas GROUP BY operadora_id
+),
+dados_crescimento AS (
+    SELECT 
+        o.razao_social, o.uf,
+        SUM(CASE WHEN (dc.ano*10+dc.trimestre) = l.min_p THEN dc.valor_despesas ELSE 0 END) as v_inicial,
+        SUM(CASE WHEN (dc.ano*10+dc.trimestre) = l.max_p THEN dc.valor_despesas ELSE 0 END) as v_final
+    FROM despesas_consolidadas dc
+    JOIN operadoras o ON dc.operadora_id = o.id
+    -- AJUSTE AQUI: Usando operadora_id em vez de id
+    JOIN limites l ON dc.operadora_id = l.operadora_id 
+    GROUP BY o.razao_social, o.uf, l.min_p, l.max_p
+    HAVING SUM(CASE WHEN (dc.ano*10+dc.trimestre) = l.min_p THEN dc.valor_despesas ELSE 0 END) > 0
+)
+SELECT 
+    razao_social as "Operadora", uf as "UF",
+    ROUND(v_inicial::NUMERIC, 2) as "Inicial (R$)",
+    ROUND(v_final::NUMERIC, 2) as "Final (R$)",
+    ROUND(((v_final - v_inicial) / v_inicial * 100)::NUMERIC, 2) as "Crescimento (%)"
+FROM dados_crescimento
+WHERE v_final > v_inicial
+ORDER BY 5 DESC LIMIT 5;
+
+-- QUERY 2: Distribuição por UF
+\echo ''
+\echo 'QUERY 2: Distribuição por UF (Top 5 por Volume)'
+SELECT 
+    o.uf as "UF",
+    ROUND(SUM(dc.valor_despesas)::NUMERIC, 2) as "Total Despesas (R$)",
+    COUNT(DISTINCT dc.operadora_id) as "Qtd Operadoras",
+    ROUND((SUM(dc.valor_despesas) / COUNT(DISTINCT dc.operadora_id))::NUMERIC, 2) as "Média por Operadora (R$)"
+FROM despesas_consolidadas dc
+JOIN operadoras o ON dc.operadora_id = o.id
+WHERE o.uf ~ '^[A-Z]{2}$'
+GROUP BY o.uf
+ORDER BY 2 DESC LIMIT 5;
+
+-- QUERY 3: Acima da Média
+\echo ''
+\echo 'QUERY 3: Operadoras Acima da Média em 2+ Trimestres'
+WITH media_trim AS (
+    SELECT ano, trimestre, AVG(valor_despesas) as m_geral 
+    FROM despesas_consolidadas GROUP BY ano, trimestre
+),
+status_op AS (
+    SELECT 
+        o.razao_social, dc.ano, dc.trimestre,
+        CASE WHEN SUM(dc.valor_despesas) > MAX(mt.m_geral) THEN 1 ELSE 0 END as acima
+    FROM despesas_consolidadas dc
+    JOIN operadoras o ON dc.operadora_id = o.id
+    JOIN media_trim mt ON dc.ano = mt.ano AND dc.trimestre = mt.trimestre
+    GROUP BY o.razao_social, dc.ano, dc.trimestre
+)
+SELECT razao_social as "Operadora", SUM(acima) as "Trimestres Acima da Média"
+FROM status_op GROUP BY razao_social
+HAVING SUM(acima) >= 2
+ORDER BY 2 DESC, 1 LIMIT 10;
+
+-- BÔNUS: Totais Gerais
+\echo ''
+\echo 'BÔNUS: Consolidação Geral 2024'
+SELECT 
+    ano as "Ano", trimestre as "Tri", 
+    COUNT(DISTINCT operadora_id) as "Ops", 
+    ROUND(SUM(valor_despesas)::NUMERIC, 2) as "Total (R$)"
+FROM despesas_consolidadas GROUP BY 1, 2 ORDER BY 1, 2;

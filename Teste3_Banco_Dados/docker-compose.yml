@@ -1,0 +1,19 @@
+services:
+  ans-database:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ans_db_container
+    environment:
+      - POSTGRES_DB=ans_dados
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts:/scripts
+      - ./data:/var/lib/postgresql/data
+      - ../Teste1_ANS_Integration/output:/input_t1:ro
+      - ../Teste2_Transformacao/output:/input_t2_out:ro
+      - ../Teste2_Transformacao/temp:/input_t2_temp:ro

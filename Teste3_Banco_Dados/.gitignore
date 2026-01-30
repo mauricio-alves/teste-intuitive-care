@@ -1,0 +1,18 @@
+# CSVs (dados temporários)
+data/*.csv
+data/*.zip
+
+# Mantém estrutura, mas ignora conteúdo
+data/*
+!data/.gitkeep
+
+# Logs de importação
+*.log
+
+# Dumps
+*.sql.gz
+*.dump
+
+# Backups
+*.bak
+*~
