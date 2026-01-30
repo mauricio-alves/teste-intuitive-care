@@ -14,7 +14,7 @@ Integrar com a API de Dados Abertos da ANS, baixar demonstrações contábeis do
 
 #### 🛡️ Hardening e Segurança de Container
 
-O projeto utiliza **Hardening de Container**, garantindo que o pipeline seja executado como usuário **não-root**. A imagem define um usuário interno restrito (`appuser`). Caso o ambiente de execução exija (como em servidores Linux), a configuração pode ser complementada no `docker-compose.yml` com a instrução `user: "${UID}:${GID}"`, mantendo a execução sem privilégios elevados e garantindo a compatibilidade de permissões com o sistema hospedeiro.
+O projeto utiliza **hardening de container**, garantindo que o pipeline seja executado como usuário **não-root**. A imagem define um usuário interno restrito (`appuser`). Caso o ambiente de execução exija (como em servidores Linux), a configuração pode ser complementada no `docker-compose.yml` com a instrução `user: "${UID}:${GID}"`, mantendo a execução sem privilégios elevados e garantindo a compatibilidade de permissões com o sistema hospedeiro.
 
 ```bash
 # Build e execução com API real
