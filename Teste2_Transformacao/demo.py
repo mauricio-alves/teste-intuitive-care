@@ -15,7 +15,7 @@ data = []
 cnpjs_exemplos = [
     "12345678000195",  
     "98765432000196",  
-    "11223344000155",    
+    "11223344000155",   
     "12345678000190",  
     "123456",          
     "11111111111111",  
@@ -31,7 +31,7 @@ razoes = [
 ]
 
 for ano, tri in [('2024', '03'), ('2024', '02'), ('2024', '01')]:
-    # Gera 50 registros por trimestre
+    # Gera 50 registros por trimestre (150 no total)
     for i in range(50):  
         cnpj = random.choice(cnpjs_exemplos)
         razao = random.choice(razoes)

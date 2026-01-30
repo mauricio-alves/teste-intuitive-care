@@ -71,7 +71,7 @@ Após a execução, a pasta `output/` conterá:
 
 ## 🔧 Decisões Técnicas e Trade-offs
 
-### 1 Validação de Identificadores
+### 1. Validação de Identificadores
 
 | Decisão            | Estratégia            | Justificativa                         |
 | ------------------ | --------------------- | ------------------------------------- |
@@ -85,7 +85,7 @@ Após a execução, a pasta `output/` conterá:
 - `CNPJ_VALIDO` (14 dígitos + DV correto)
 - `CNPJ_TAMANHO_INVALIDO`, `CNPJ_DV_INVALIDO`, `CNPJ_DIGITOS_REPETIDOS`
 
-### 2 Enriquecimento com Múltiplas Fontes
+### 2. Enriquecimento com Múltiplas Fontes
 
 **Problema:** Dados consolidados usam **Registro ANS** (6 dígitos), mas cadastro padrão usa **CNPJ** (14 dígitos).
 
@@ -125,7 +125,7 @@ Embora o requisito especifique "CNPJ como chave", os dados consolidados do Teste
 | Só cadastro CNPJ | Simples     | Match ~0%     | ❌      |
 | Inner Join       | CSV "limpo" | Perde dados   | ❌      |
 
-### 3 Agregação por Razão Social + UF
+### 3. Agregação por Razão Social + UF
 
 | Decisão           | Estratégia             | Justificativa                    |
 | ----------------- | ---------------------- | -------------------------------- |

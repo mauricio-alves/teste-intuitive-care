@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 class DataTransformation:
     # Pipeline profissional de transformação e enriquecimento de dados da ANS
+
+    # Limite máximo de download para evitar ataques DoS
+    MAX_DOWNLOAD_SIZE = 150 * 1024 * 1024
     
     # URLs oficiais para busca do cadastro de operadoras
     BASE_URL_CADASTRO_COMPLETO = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude/"
@@ -41,11 +44,11 @@ class DataTransformation:
             resto = soma % 11
             return 0 if resto < 2 else 11 - resto
         
-        multiplicadores_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        multiplicadores_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        first_digit_multiplier = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        second_digit_multiplier = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
         
-        d1 = obter_digito(cnpj_str, multiplicadores_1)
-        d2 = obter_digito(cnpj_str + str(d1), multiplicadores_2)
+        d1 = obter_digito(cnpj_str, first_digit_multiplier)
+        d2 = obter_digito(cnpj_str + str(d1), second_digit_multiplier)
         
         return str(d1) + str(d2)
 
@@ -111,7 +114,6 @@ class DataTransformation:
     def baixar_dados_cadastrais(self):
         # Download seguro com limite de tamanho (Anti-DoS) e urljoin
         logger.info("Buscando cadastro de operadoras da ANS...")
-        MAX_DOWNLOAD_SIZE = 150 * 1024 * 1024 
         
         for tentativa, url_base in enumerate([self.BASE_URL_CADASTRO_COMPLETO, self.BASE_URL_CADASTRO_ATIVAS], 1):
             try:
@@ -123,6 +125,12 @@ class DataTransformation:
                 
                 if csv_links:
                     url_completa = csv_links[-1]
+
+                    # Validação extra de segurança que garante que a URL pertence ao domínio da ANS
+                    if not url_completa.startswith("https://dadosabertos.ans.gov.br"):
+                        logger.warning(f"URL de download suspeita ignorada: {url_completa}")
+                        continue
+
                     logger.info(f"Baixando: {url_completa.split('/')[-1]}")
                     
                     with requests.get(url_completa, stream=True, timeout=120) as r:
@@ -133,8 +141,8 @@ class DataTransformation:
                             for chunk in r.iter_content(chunk_size=8192):
                                 if chunk:
                                     downloaded += len(chunk)
-                                    if downloaded > MAX_DOWNLOAD_SIZE:
-                                        raise ValueError(f"Arquivo excede limite de {MAX_DOWNLOAD_SIZE} bytes.")
+                                    if downloaded > self.MAX_DOWNLOAD_SIZE:
+                                        raise ValueError(f"O arquivo excede o limite de {self.MAX_DOWNLOAD_SIZE / (1024*1024):.0f}MB.")
                                     f.write(chunk)
                     return local_path
             except Exception as e:
@@ -174,9 +182,13 @@ class DataTransformation:
             logger.error("Nenhum identificador válido (CNPJ/Registro) encontrado no cadastro.")
             return df_consolidado
 
-        renomear = {col_registro if col_registro else col_cnpj: 'ChaveJoin'}
-        if col_razao: renomear[col_razao] = 'RazaoSocialCadastro'
-        if col_uf: renomear[col_uf] = 'UF'
+        chave_principal = col_registro if col_registro else col_cnpj
+        campos_para_renomear = [
+            (chave_principal, 'ChaveJoin'),
+            (col_razao, 'RazaoSocialCadastro'),
+            (col_uf, 'UF'),
+        ]
+        renomear = {col: novo_nome for col, novo_nome in campos_para_renomear if col}
         
         df_cad_slim = df_cadastro[list(renomear.keys())].rename(columns=renomear).copy()
         df_cad_slim['ChaveJoin'] = df_cad_slim['ChaveJoin'].astype(str).str.replace(r'\D', '', regex=True)
@@ -190,7 +202,7 @@ class DataTransformation:
         if 'RazaoSocialCadastro' in df_merged.columns:
             mask = (df_merged['RazaoSocial'].isin(['N/A', '']) | df_merged['RazaoSocial'].isna()) & df_merged['RazaoSocialCadastro'].notna()
             df_merged.loc[mask, 'RazaoSocial'] = df_merged.loc[mask, 'RazaoSocialCadastro']
-            df_merged.drop(columns=['RazaoSocialCadastro'], inplace=True)
+            df_merged = df_merged.drop(columns=['RazaoSocialCadastro'])
 
         df_merged['StatusEnriquecimento'] = np.where(df_merged['_merge'] == 'both', 'ENRIQUECIDO', 'SEM_CADASTRO')
         
@@ -214,8 +226,13 @@ class DataTransformation:
         )
         df_v = df[mask_validos].copy()
         
-        if df_v.empty: return pd.DataFrame()
-        
+        if df_v.empty:
+            logger.warning(
+                "Nenhum registro válido encontrado para agregação; "
+                "retornando DataFrame vazio."
+            )
+            return pd.DataFrame()
+                
         # Named aggregation para clareza e prevenção de falhas de índice
         agregado = df_v.groupby(['RazaoSocial', 'UF'], observed=True).agg(
             TotalDespesas=('ValorDespesas', 'sum'),
