@@ -95,7 +95,6 @@ Após a execução, a pasta `output/` conterá:
 | -------------------- | ------------------------------------------ | ------------------- | -------------- |
 | 1. Cadastro Completo | `.../operadoras_de_plano_de_saude/`        | Registro ANS + CNPJ | ~90%           |
 | 2. Operadoras Ativas | `.../operadoras_de_plano_de_saude_ativas/` | CNPJ                | ~30-40%        |
-| 3. Registro ANS      | `.../oper_com_registro_ativo/`             | Registro ANS        | ~80-90%        |
 
 **Lógica:**
 
