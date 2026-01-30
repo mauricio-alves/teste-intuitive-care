@@ -33,8 +33,8 @@ docker run -v ${PWD}/output:/app/output -v ${PWD}/../Teste1_ANS_Integration/outp
 # Executar demonstração (gera os dados simulados)
 docker run -v ${PWD}/output:/app/output teste2-ans python demo.py
 
-# Processar os dados da demonstração (Opcional - Requer renomear o arquivo)
-docker run -v ${PWD}/output:/app/output teste2-ans mv output/consolidado_despesas_demo.csv output/consolidado_despesas.csv
+# Processar os dados da demonstração
+docker run -v ${PWD}/output:/app/output teste2-ans python -c "import shutil; shutil.move('output/consolidado_despesas_demo.csv', 'output/consolidado_despesas.csv')"
 docker run -v ${PWD}/output:/app/output teste2-ans python main.py
 ```
 
@@ -50,8 +50,8 @@ python main.py
 # Ou executar demonstração (gera os dados simulados)
 python demo.py
 
-# Processar os dados da demonstração (Opcional - Requer renomear o arquivo)
-mv output/consolidado_despesas_demo.csv output/consolidado_despesas.csv
+# Processar os dados da demonstração
+python -c "import shutil; shutil.move('output/consolidado_despesas_demo.csv', 'output/consolidado_despesas.csv')"
 python main.py
 ```
 
