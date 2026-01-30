@@ -12,16 +12,36 @@ from urllib.parse import urljoin, urlparse
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def _get_env_int(env_name: str, default_value: int) -> int:
+    # Obtém um valor inteiro de variável de ambiente com fallback seguro
+    env_val = os.getenv(env_name)
+    if env_val is None:
+        return default_value
+    try:
+        val = int(env_val)
+        return val if val > 0 else default_value
+    except ValueError:
+        logger.warning(f"Valor inválido para {env_name} ({env_val}). Usando padrão {default_value}.")
+        return default_value
+
 class DataTransformation:
     # Pipeline profissional para transformação, validação e enriquecimento de dados da ANS.
 
     # Configurações de Download e Segurança
     MAX_DOWNLOAD_SIZE = 150 * 1024 * 1024 # Limite de 150MB (Proteção Anti-DoS)
     ALLOWED_DOMAIN = "dadosabertos.ans.gov.br"
+
+    # Constantes para validação de CNPJ (Evita recreação de listas em memória)
+    FIRST_DIGIT_MULTIPLIERS = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    SECOND_DIGIT_MULTIPLIERS = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
     
     # URLs oficiais para busca do cadastro de operadoras
     BASE_URL_CADASTRO_COMPLETO = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude/"
     BASE_URL_CADASTRO_ATIVAS = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/"
+
+    # Configurações de Rede (Configuráveis via Docker/Ambiente)
+    TIMEOUT_BUSCA = _get_env_int("TIMEOUT_BUSCA_SEG", 60)   # Aumentado para 60s padrão
+    TIMEOUT_DOWNLOAD = _get_env_int("TIMEOUT_DOWNLOAD_SEG", 300) # Aumentado para 300s padrão
     
     def __init__(self, csv_consolidado_path):
         self.csv_consolidado = Path(csv_consolidado_path)
@@ -41,15 +61,18 @@ class DataTransformation:
 
     def calcular_digito_verificador_cnpj(self, cnpj_base):
         # Implementa o algoritmo oficial de dígitos verificadores do CNPJ
+
+        if cnpj_base is None:
+            return None
+        if not isinstance(cnpj_base, (str, int, np.integer)):
+            return None
+    
         cnpj_str = str(cnpj_base)
         if len(cnpj_str) != 12 or not cnpj_str.isdigit():
             return None
         
-        first_digit_multipliers = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        second_digit_multipliers = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        
-        d1 = self._obter_digito_verificador_cnpj(cnpj_str, first_digit_multipliers)
-        d2 = self._obter_digito_verificador_cnpj(cnpj_str + str(d1), second_digit_multipliers)
+        d1 = self._obter_digito_verificador_cnpj(cnpj_str, self.FIRST_DIGIT_MULTIPLIERS)
+        d2 = self._obter_digito_verificador_cnpj(cnpj_str + str(d1), self.SECOND_DIGIT_MULTIPLIERS)
         
         return str(d1) + str(d2)
 
@@ -113,7 +136,7 @@ class DataTransformation:
         
         for tentativa, url_base in enumerate([self.BASE_URL_CADASTRO_COMPLETO, self.BASE_URL_CADASTRO_ATIVAS], 1):
             try:
-                response = requests.get(url_base, timeout=30)
+                response = requests.get(url_base, timeout=self.TIMEOUT_BUSCA)
                 response.raise_for_status()
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
@@ -129,7 +152,7 @@ class DataTransformation:
 
                     logger.info(f"A descarregar: {url_completa.split('/')[-1]}")
                     
-                    with requests.get(url_completa, stream=True, timeout=120) as r:
+                    with requests.get(url_completa, stream=True, timeout=self.TIMEOUT_DOWNLOAD) as r:
                         r.raise_for_status()
                         downloaded = 0
                         local_path = self.temp_dir / "operadoras_cadastro.csv"
@@ -220,7 +243,6 @@ class DataTransformation:
             QtdRegistros=('ValorDespesas', 'count')
         ).reset_index()
         
-        # DesvioPadrao fica NaN para grupos com 1 único registro (precisão estatística)
         agregado[['TotalDespesas', 'MediaDespesas', 'QtdRegistros']] = agregado[['TotalDespesas', 'MediaDespesas', 'QtdRegistros']].fillna(0)
         
         return agregado.sort_values('TotalDespesas', ascending=False)
