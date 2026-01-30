@@ -14,11 +14,11 @@ Validar, enriquecer e agregar os dados consolidados do Teste 1. O pipeline aplic
 
 O Teste 2 depende do arquivo `consolidado_despesas.csv` gerado no Teste 1. O Docker Compose está configurado para ler este arquivo automaticamente através de volumes montados.
 
-### Opção 1: Docker (Recomendado)
-
-#### 🛡️ Hardening e Segurança de Container
+### 🛡️ Hardening e Segurança de Container
 
 O projeto utiliza **Hardening de Container**, garantindo que o pipeline seja executado como usuário **não-root**. A imagem define um usuário interno restrito (`appuser`). Caso o ambiente de execução exija (como em servidores Linux), a configuração pode ser complementada no `docker-compose.yml` com a instrução `user: "${UID}:${GID}"`, mantendo a execução sem privilégios elevados e garantindo a compatibilidade de permissões com o sistema hospedeiro.
+
+### Opção 1: Docker (Recomendado)
 
 ```bash
 # Build e execução do pipeline completo
@@ -107,11 +107,23 @@ else:
     join_por = 'CNPJ'          # Fallback
 ```
 
+**Nota sobre a chave de join:**
+
+Embora o requisito especifique "CNPJ como chave", os dados consolidados do Teste 1 utilizam **Registro ANS** (6 dígitos), não CNPJ (14 dígitos). O código implementa detecção automática da chave disponível, priorizando Registro ANS quando presente no cadastro (match ~90%), com fallback para CNPJ (match ~30%). Esta adaptação foi necessária para atender ao objetivo real do enriquecimento: preencher Razão Social e UF para agregação posterior.
+
 **Tratamento de não-match:**
 
 - Tipo de Join: **Left** (mantém todos os dados)
 - Status: `ENRIQUECIDO` ou `SEM_CADASTRO`
 - Valores padrão: `NAO_ENCONTRADO`, `NAO_INFORMADO`, `XX`
+
+**Alternativas consideradas:**
+
+| Estratégia       | Prós        | Contras       | Escolha |
+| ---------------- | ----------- | ------------- | ------- |
+| Múltiplas fontes | Match ~90%  | Mais complexo | ✅      |
+| Só cadastro CNPJ | Simples     | Match ~0%     | ❌      |
+| Inner Join       | CSV "limpo" | Perde dados   | ❌      |
 
 ### 3 Agregação por Razão Social + UF
 
@@ -123,38 +135,22 @@ else:
 
 **Métricas calculadas:**
 
-| Métrica       | Descrição                        |
-| ------------- | -------------------------------- |
-| TotalDespesas | Soma por operadora/UF            |
-| MediaDespesas | Média por registro               |
-| DesvioPadrao  | Variabilidade (detecta outliers) |
-| QtdRegistros  | Quantidade agregada              |
-
----
-
-## 🐛 Validações Implementadas
-
-### Identificadores
-
-- ✅ Registro ANS (6 dígitos)
-- ✅ CNPJ (14 dígitos com validação de dígitos verificadores)
-- ✅ Detecção de dígitos repetidos e tamanhos inválidos
-
-### Valores e Razão Social
-
-- ✅ Numéricos Positivos (> 0)
-- ✅ Razão Social não vazia (Tratamento resiliente de tipos `NaN` e `float`)
-
----
-
-## 📈 Agregações Calculadas
-
 | Métrica           | Descrição                                             |
 | ----------------- | ----------------------------------------------------- |
 | **TotalDespesas** | Soma total das despesas por operadora na UF           |
 | **MediaDespesas** | Média das despesas identificadas no período           |
 | **DesvioPadrao**  | Medida de variabilidade (identifica valores atípicos) |
 | **QtdRegistros**  | Contagem total de entradas processadas                |
+
+---
+
+## 🐛 Validações Implementadas
+
+| Tipo                | Validações                                          |
+| ------------------- | --------------------------------------------------- |
+| **Identificadores** | Registro ANS (6), CNPJ (14 + DV), Dígitos repetidos |
+| **Valores**         | Numéricos, Positivos (> 0), Não nulos               |
+| **Razão Social**    | Não vazia, Diferente de N/A/nan                     |
 
 ---
 
