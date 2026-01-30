@@ -20,6 +20,7 @@ class DataTransformation:
     BASE_URL_CADASTRO_ATIVAS = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/"
     
     def __init__(self, csv_consolidado_path):
+        # Inicializa diretórios e caminhos, validando a existência do arquivo de entrada
         self.csv_consolidado = Path(csv_consolidado_path)
         self.output_dir = Path("output")
         self.temp_dir = Path("temp")
@@ -30,7 +31,7 @@ class DataTransformation:
             raise FileNotFoundError(f"Arquivo de entrada não encontrado: {csv_consolidado_path}")
 
     def calcular_digito_verificador_cnpj(self, cnpj_base):
-        # Cálculo dos dígitos verificadores do CNPJ (últimos 2 dígitos)
+        # Implementa o algoritmo oficial de dígitos verificadores do CNPJ
         cnpj_str = str(cnpj_base)
         if len(cnpj_str) != 12 or not cnpj_str.isdigit():
             return None
@@ -55,7 +56,7 @@ class DataTransformation:
         
         cnpj_limpo = ''.join(c for c in str(cnpj) if c.isdigit())
 
-        # Identifica Registro ANS (Identificador numérico de 6 dígitos sem checksum oficial)
+        # Aceita Registro ANS baseado em tamanho e composição numérica
         if len(cnpj_limpo) == 6:
             return True, 'REGISTRO_ANS_VALIDO'
         
@@ -75,11 +76,11 @@ class DataTransformation:
         return True, 'CNPJ_VALIDO'
 
     def validar_dados(self, df):
-        # Validações de dados com otimização de memória
+        # Executa validações vetorizadas e otimiza performance processando valores únicos
         logger.info("Aplicando validações de dados e otimização de memória...")
         df = df.copy()
         
-        # Verificação robusta de colunas obrigatórias
+        # Verificação rigorosa de colunas obrigatórias
         cols_req = ['CNPJ', 'RazaoSocial', 'ValorDespesas']
         colunas_ausentes = [c for c in cols_req if c not in df.columns]
         if colunas_ausentes:
@@ -89,7 +90,8 @@ class DataTransformation:
             if col in df.columns:
                 df[col] = df[col].astype('category')
         
-        # Ordem de validação corrigida para evitar warnings com NaN
+        # Conversão e validação de valores financeiros (evita warnings com NaN)
+        df['ValorDespesas'] = pd.to_numeric(df['ValorDespesas'], errors='coerce')
         df['ValidacaoValor'] = 'VALOR_VALIDO'
         mask_valor_nulo = pd.isna(df['ValorDespesas'])
         df.loc[mask_valor_nulo, 'ValidacaoValor'] = 'VALOR_NULO'
@@ -99,7 +101,7 @@ class DataTransformation:
         razao_str = df['RazaoSocial'].astype(str)
         df.loc[df['RazaoSocial'].isna() | (razao_str.str.strip() == '') | (razao_str.str.lower() == 'nan'), 'ValidacaoRazao'] = 'RAZAO_VAZIA'
         
-        # Validação otimizada: processa cada identificador único apenas uma vez
+        # Performance: Valida cada identificador único apenas uma vez e mapeia de volta
         cnpj_unicos = df['CNPJ'].dropna().unique()
         mapa_validacao = {cnpj: self.validar_cnpj(cnpj)[1] for cnpj in cnpj_unicos}
         df['ValidacaoCNPJ'] = df['CNPJ'].map(mapa_validacao).fillna('CNPJ_VAZIO')
@@ -107,9 +109,8 @@ class DataTransformation:
         return df
 
     def baixar_dados_cadastrais(self):
-        # Download seguro e robusto do cadastro de operadoras
+        # Download seguro com limite de tamanho (Anti-DoS) e urljoin
         logger.info("Buscando cadastro de operadoras da ANS...")
-        # Limite de segurança contra arquivos maliciosos (150 MB)
         MAX_DOWNLOAD_SIZE = 150 * 1024 * 1024 
         
         for tentativa, url_base in enumerate([self.BASE_URL_CADASTRO_COMPLETO, self.BASE_URL_CADASTRO_ATIVAS], 1):
@@ -118,7 +119,6 @@ class DataTransformation:
                 response.raise_for_status()
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # Construção segura de URLs com urljoin
                 csv_links = [urljoin(url_base, a['href']) for a in soup.find_all('a', href=True) if a['href'].endswith('.csv')]
                 
                 if csv_links:
@@ -134,7 +134,7 @@ class DataTransformation:
                                 if chunk:
                                     downloaded += len(chunk)
                                     if downloaded > MAX_DOWNLOAD_SIZE:
-                                        raise ValueError(f"Arquivo excede o limite de {MAX_DOWNLOAD_SIZE} bytes.")
+                                        raise ValueError(f"Arquivo excede limite de {MAX_DOWNLOAD_SIZE} bytes.")
                                     f.write(chunk)
                     return local_path
             except Exception as e:
@@ -143,7 +143,7 @@ class DataTransformation:
         return None
 
     def ler_dados_cadastrais(self, arquivo_path):
-        # Leitura resiliente do arquivo cadastral com múltiplas tentativas de encoding e separador
+        # Leitura resiliente com log detalhado de falhas de formato/codificação
         logger.info("Lendo dados cadastrais...")
         erros_tentativas = []
         for encoding in ['utf-8', 'iso-8859-1', 'cp1252']:
@@ -152,15 +152,15 @@ class DataTransformation:
                     df = pd.read_csv(arquivo_path, sep=sep, encoding=encoding, low_memory=False, dtype=str)
                     if len(df.columns) > 1:
                         return df
-                except Exception as e:
+                except (pd.errors.ParserError, UnicodeDecodeError, FileNotFoundError, OSError) as e:
                     erros_tentativas.append(f"enc={encoding}, sep={repr(sep)} -> {e}")
                     continue
         
         detalhes = " | ".join(erros_tentativas)
-        raise Exception(f"Erro ao ler arquivo cadastral. Detalhes das tentativas: {detalhes}")
+        raise ValueError(f"Erro ao ler arquivo cadastral. Detalhes: {detalhes}")
 
     def enriquecer_dados(self, df_consolidado, df_cadastro):
-        # Enriquecimento avançado com lógica de fallback para colunas
+        # Join inteligente priorizando Registro ANS para maximizar o match
         logger.info("Enriquecendo dados com informações cadastrais...")
         df_cadastro.columns = df_cadastro.columns.str.strip().str.upper()
         
@@ -169,7 +169,11 @@ class DataTransformation:
         col_razao = next((c for c in df_cadastro.columns if c == 'RAZAO_SOCIAL'), None)
         col_uf = next((c for c in df_cadastro.columns if c in ['UF', 'SIGLA_UF']), None)
         
-        chave_join = 'REGISTRO_ANS' if col_registro else 'CNPJ'
+        # Identifica a chave primária disponível no cadastro (Preferência: Registro ANS)
+        if not col_registro and not col_cnpj:
+            logger.error("Nenhum identificador válido (CNPJ/Registro) encontrado no cadastro.")
+            return df_consolidado
+
         renomear = {col_registro if col_registro else col_cnpj: 'ChaveJoin'}
         if col_razao: renomear[col_razao] = 'RazaoSocialCadastro'
         if col_uf: renomear[col_uf] = 'UF'
@@ -189,17 +193,30 @@ class DataTransformation:
             df_merged.drop(columns=['RazaoSocialCadastro'], inplace=True)
 
         df_merged['StatusEnriquecimento'] = np.where(df_merged['_merge'] == 'both', 'ENRIQUECIDO', 'SEM_CADASTRO')
-        df_merged['UF'] = df_merged['UF'].fillna('XX')
+        
+        # Fallback de UF caso a coluna não tenha sido encontrada ou o match tenha falhado
+        if 'UF' in df_merged.columns:
+            df_merged['UF'] = df_merged['UF'].fillna('XX')
+        else:
+            df_merged['UF'] = 'XX'
+            
         return df_merged.drop(columns=['ChaveJoin', '_merge'])
 
     def agregar_dados(self, df):
-        # Agregação eficiente com filtragem prévia
+        # Agregação final com máscara combinada para otimização de memória
         logger.info("Agregando dados por Razão Social e UF...")
-        df_v = df[(df['ValidacaoCNPJ'].isin(['CNPJ_VALIDO', 'REGISTRO_ANS_VALIDO'])) & (df['ValidacaoValor'] == 'VALOR_VALIDO')].copy()
-        df_v = df_v[~df_v['RazaoSocial'].isin(['N/A', '', 'nan']) & df_v['RazaoSocial'].notna()]
+        
+        mask_validos = (
+            df['ValidacaoCNPJ'].isin(['CNPJ_VALIDO', 'REGISTRO_ANS_VALIDO']) & 
+            (df['ValidacaoValor'] == 'VALOR_VALIDO') &
+            ~df['RazaoSocial'].isin(['N/A', '', 'nan']) & 
+            df['RazaoSocial'].notna()
+        )
+        df_v = df[mask_validos].copy()
         
         if df_v.empty: return pd.DataFrame()
         
+        # Named aggregation para clareza e prevenção de falhas de índice
         agregado = df_v.groupby(['RazaoSocial', 'UF'], observed=True).agg(
             TotalDespesas=('ValorDespesas', 'sum'),
             MediaDespesas=('ValorDespesas', 'mean'),
@@ -210,13 +227,12 @@ class DataTransformation:
         return agregado.sort_values('TotalDespesas', ascending=False)
 
     def executar(self):
-        # Execução do pipeline completo com logging detalhado
+        # Orquestração do pipeline com tratamento de erro global e limpeza de ambiente
         logger.info("="*60)
         logger.info("TESTE 2 - TRANSFORMAÇÃO E VALIDAÇÃO DE DADOS")
         logger.info("="*60)
         
         try:
-            # Tratamento robusto de erro na leitura do CSV inicial
             df = pd.read_csv(self.csv_consolidado, dtype={'CNPJ': str, 'RazaoSocial': str})
             
             df_validado = self.validar_dados(df)
@@ -244,21 +260,29 @@ class DataTransformation:
             logger.exception(f"Erro fatal no pipeline: {e}")
             raise
 
-    def gerar_relatorio(self, df_v, df_e, df_a):
-        # Geração de relatório detalhado
+    def gerar_relatorio(self, df_validado, df_enriquecido, df_agregado):
+        # Gera relatório técnico consolidando as métricas de integridade
         with open(self.output_dir / "relatorio_teste2.txt", 'w', encoding='utf-8') as f:
-            f.write(f"RELATÓRIO TESTE 2\nTotal Registros: {len(df_v)}\n\n")
-            f.write(f"VALIDAÇÃO CNPJ:\n{df_v['ValidacaoCNPJ'].value_counts().to_string()}\n\n")
-            f.write(f"ENRIQUECIMENTO:\n{df_e['StatusEnriquecimento'].value_counts().to_string()}\n\n")
-            f.write(f"AGREGAÇÃO:\nTotal Grupos: {len(df_a)}\n")
-            if not df_a.empty: f.write(f"\nTop 10:\n{df_a.head(10).to_string(index=False)}")
+            f.write(f"RELATÓRIO TESTE 2\nTotal Registros Processados: {len(df_validado)}\n\n")
+            f.write(f"VALIDAÇÃO CNPJ/ANS:\n{df_validado['ValidacaoCNPJ'].value_counts().to_string()}\n\n")
+            f.write(f"STATUS ENRIQUECIMENTO:\n{df_enriquecido['StatusEnriquecimento'].value_counts().to_string()}\n\n")
+            f.write(f"AGREGAÇÃO FINAL:\nTotal Grupos (Operadora/UF): {len(df_agregado)}\n")
+            if not df_agregado.empty: 
+                f.write(f"\nTop 10 Operadoras por Despesa:\n{df_agregado.head(10).to_string(index=False)}")
 
     def compactar_resultado(self):
-        # Compactação segura dos arquivos de saída
+        # Nome do arquivo conforme requisito: Teste_Mauricio_Alves.zip
         zip_path = self.output_dir / "Teste_Mauricio_Alves.zip"
+        files_added = 0
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for f in self.output_dir.glob('*.*'):
-                if f.suffix in ['.csv', '.txt']: zipf.write(f, f.name)
+                # Evita incluir o próprio zip se ele já existisse
+                if f.suffix in ['.csv', '.txt'] and f.name != zip_path.name:
+                    zipf.write(f, f.name)
+                    files_added += 1
+        
+        if files_added == 0:
+            logger.warning("Nenhum arquivo gerado para compactação.")
 
 if __name__ == "__main__":
     caminhos = [
@@ -266,9 +290,10 @@ if __name__ == "__main__":
         '../Teste1_ANS_Integration/output/consolidado_despesas.csv', 
         'output/consolidado_despesas.csv'
     ]
+    # Localiza dinamicamente a fonte de dados (Docker vs Local)
     csv_path = next((p for p in caminhos if os.path.exists(p)), None)
     
     if csv_path:
         DataTransformation(csv_path).executar()
     else:
-        logger.error(f"Nenhum arquivo de entrada encontrado. Caminhos verificados: {caminhos}")
+        logger.error(f"Fonte de dados não localizada. Caminhos verificados: {caminhos}")
