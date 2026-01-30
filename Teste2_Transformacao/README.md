@@ -71,32 +71,64 @@ Após a execução, a pasta `output/` conterá:
 
 ## 🔧 Decisões Técnicas e Trade-offs
 
-### 1 Identificadores - Estratégia Híbrida (CNPJ e Registro ANS)
+### 1 Validação de Identificadores
 
-**Problema:** Os dados da ANS frequentemente utilizam o Registro ANS (6 dígitos) na coluna destinada ao CNPJ (14 dígitos).
+| Decisão            | Estratégia            | Justificativa                         |
+| ------------------ | --------------------- | ------------------------------------- |
+| **CNPJ inválidos** | Manter + Marcar tipo  | Transparência, não perde dados        |
+| **Registro ANS**   | Aceitar (6 dígitos)   | Dados ANS usam Registro ANS, não CNPJ |
+| **Algoritmo**      | Dígitos verificadores | Validação oficial Receita Federal     |
 
-**Estratégia Escolhida:** **Identificação Multinível**.
+**Tipos de validação:**
 
-- O sistema valida CNPJs através do algoritmo oficial de dígitos verificadores.
-- Simultaneamente, aceita identificadores de 6 dígitos como `REGISTRO_ANS_VALIDO`.
-- **Prós:** Evita o descarte massivo de dados legítimos da ANS que não possuem CNPJ no log de despesas.
+- `REGISTRO_ANS_VALIDO` (6 dígitos)
+- `CNPJ_VALIDO` (14 dígitos + DV correto)
+- `CNPJ_TAMANHO_INVALIDO`, `CNPJ_DV_INVALIDO`, `CNPJ_DIGITOS_REPETIDOS`
 
-### 2 Enriquecimento e Join
+### 2 Enriquecimento com Múltiplas Fontes
 
-**Tratamento de Match:** - Utilizou-se um **Left Join** para garantir que nenhuma despesa do Teste 1 seja perdida, mesmo que a operadora não conste no cadastro ativo.
+**Problema:** Dados consolidados usam **Registro ANS** (6 dígitos), mas cadastro padrão usa **CNPJ** (14 dígitos).
 
-- Registros sem correspondência são marcados como `SEM_CADASTRO` e preenchidos com valores padrão (`XX`, `NAO_INFORMADO`).
+**Solução:** Join inteligente com múltiplas fontes em ordem de prioridade.
 
-**Tratamento de Duplicatas:**
+| Fonte                | URL                                        | Chave               | Match Esperado |
+| -------------------- | ------------------------------------------ | ------------------- | -------------- |
+| 1. Cadastro Completo | `.../operadoras_de_plano_de_saude/`        | Registro ANS + CNPJ | ~90%           |
+| 2. Operadoras Ativas | `.../operadoras_de_plano_de_saude_ativas/` | CNPJ                | ~30-40%        |
+| 3. Registro ANS      | `.../oper_com_registro_ativo/`             | Registro ANS        | ~80-90%        |
 
-- Antes do join, o cadastro de operadoras é deduplicado pelo CNPJ (`drop_duplicates`) para evitar a explosão artificial de registros (Fanning-out).
+**Lógica:**
 
-### 3 Agregação e Performance
+```python
+# Detecta automaticamente qual chave usar
+if 'REGISTRO_ANS' in cadastro:
+    join_por = 'REGISTRO_ANS'  # Match alto
+else:
+    join_por = 'CNPJ'          # Fallback
+```
 
-**Otimização de Memória:**
+**Tratamento de não-match:**
 
-- Colunas de alta repetição (`UF`, `Modalidade`, `Ano`) são convertidas para o tipo `category`.
-- O agrupamento utiliza `observed=True` para evitar falhas de índice em DataFrames esparsos ou vazios.
+- Tipo de Join: **Left** (mantém todos os dados)
+- Status: `ENRIQUECIDO` ou `SEM_CADASTRO`
+- Valores padrão: `NAO_ENCONTRADO`, `NAO_INFORMADO`, `XX`
+
+### 3 Agregação por Razão Social + UF
+
+| Decisão           | Estratégia             | Justificativa                    |
+| ----------------- | ---------------------- | -------------------------------- |
+| **Processamento** | Pandas em memória      | 2M registros OK, simplicidade    |
+| **Filtro**        | Remove N/A e inválidos | Só agrega dados válidos          |
+| **Ordenação**     | Sort pós-agregação     | DataFrame pequeno (~1000 linhas) |
+
+**Métricas calculadas:**
+
+| Métrica       | Descrição                        |
+| ------------- | -------------------------------- |
+| TotalDespesas | Soma por operadora/UF            |
+| MediaDespesas | Média por registro               |
+| DesvioPadrao  | Variabilidade (detecta outliers) |
+| QtdRegistros  | Quantidade agregada              |
 
 ---
 
@@ -129,8 +161,8 @@ Após a execução, a pasta `output/` conterá:
 ## ⏱️ Performance Realizada
 
 - **Volumetria:** > 2.100.000 registros processados.
-- **Tempo total:** ~1 minuto (Pipeline completo incluindo download cadastral).
-- **Memória:** Estabilizada entre 400-600MB via tipos categóricos.
+- **Tempo total:** ~2-3 minutos (Pipeline completo incluindo download cadastral).
+- **Memória:** Estabilizada entre 500-700MB via tipos categóricos.
 
 ---
 
