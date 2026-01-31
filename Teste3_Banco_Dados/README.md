@@ -20,12 +20,16 @@ Estruturar banco de dados relacional para armazenar dados da ANS, implementar im
 ### Opção 1: Docker (Recomendado)
 
 ```bash
-# Garante que o container do Teste 2 esteja ativo primeiro
+# Garantir que o container temporário do Teste 2 esteja ativo primeiro
 docker-compose -f ../Teste2_Transformacao/docker-compose.yml run -d --name teste2_transformacao_container teste2-transformacao tail -f /dev/null
 
-# Copia e executa o script de preparação
+# Copiar e executar o script de preparação
 docker cp pre_import.py teste2_transformacao_container:/app/pre_import.py
 docker exec -it teste2_transformacao_container python pre_import.py
+
+# Parar e remover o container temporário do Teste 2
+docker stop teste2_transformacao_container
+docker rm teste2_transformacao_container
 
 # Subir o banco de dados
 docker-compose up -d
@@ -39,48 +43,42 @@ docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/02_im
 # Executar queries analíticas
 docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql
 
-# Gerar relatório final (Opcional)
-docker exec ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on > scripts/relatorio_final.txt
+# Gerar relatório final
+docker exec ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on > data/relatorio_final.txt
 
 # Limpar o banco (Opcional)
 docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/99_limpeza.sql
 ```
 
-### Opção 2: MySQL
+### Opção 2: PostgreSQL (Manual/Local)
 
 ```bash
-# Criar banco
-mysql -u root -p -e "CREATE DATABASE ans_dados CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# Criar o banco de dados
+psql -U postgres -c "CREATE DATABASE ans_dados;"
 
-# Executar DDL
-mysql -u root -p ans_dados < scripts/01_ddl_mysql.sql
+# Executar a estrutura (DDL)
+psql -U postgres -d ans_dados -f scripts/01_ddl_postgresql.sql
 
 # Importar dados
-mysql -u root -p ans_dados < scripts/02_import_mysql.sql
+psql -U postgres -d ans_dados -f scripts/02_import_postgresql.sql
 
 # Executar queries analíticas
-mysql -u root -p ans_dados < scripts/03_queries_analiticas.sql
+psql -U postgres -d ans_dados -f scripts/03_queries_analiticas.sql
+
+# Gerar relatório final
+psql -U postgres -d ans_dados -f scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o data/relatorio_final.txt
 ```
 
 ---
 
-## 🗂️ Estrutura de Arquivos
+## 🗂️ Arquivos Gerados
 
-```
-Teste3_Banco_Dados/
-├── README.md                          ✅ Este arquivo
-├── scripts/
-│   ├── 01_ddl_postgresql.sql          ✅ Criação de tabelas (PostgreSQL)
-│   ├── 01_ddl_mysql.sql               ✅ Criação de tabelas (MySQL)
-│   ├── 02_import_postgresql.sql       ✅ Importação CSVs (PostgreSQL)
-│   ├── 02_import_mysql.sql            ✅ Importação CSVs (MySQL)
-│   ├── 03_queries_analiticas.sql      ✅ Queries analíticas
-│   └── 99_limpeza.sql                 ✅ Drop tables
-├── data/
-│   └── .gitkeep                       ✅ Pasta para CSVs
-└── docs/
-    └── diagrama_er.md                 ✅ Diagrama ER
-```
+Após a execução completa do workflow, a estrutura da pasta `Teste3_Banco_Dados/data/` será populada e organizada da seguinte forma:
+
+- **`pgdata/`**: Diretório criado automaticamente pelo container PostgreSQL para armazenar os volumes binários e a persistência do banco de dados (2.1M+ registros).
+  - _Nota: Este diretório está listado no `.gitignore` para evitar o versionamento de arquivos binários e conflitos de permissão root/user._
+- **`relatorio_final.txt`**: Documento gerado pelo script de queries analíticas, contendo os resultados das queries.
+- **`.gitkeep`**: Arquivo de controle utilizado para preservar a existência da pasta `data/` no repositório remoto, garantindo que o ambiente Docker encontre o caminho mapeado para o volume.
 
 ---
 
@@ -295,35 +293,9 @@ HAVING SUM(acima) >= 2;
 
 ### Diagrama ER
 
-```
-┌─────────────────────────────┐
-│      operadoras             │
-├─────────────────────────────┤
-│ ⚿ id (PK)                   │
-│   registro_ans              │
-│   cnpj                      │
-│   razao_social              │
-│   modalidade                │
-│   uf                        │
-└─────────────────────────────┘
-           │
-           │ 1
-           │
-           ├────────────────────┐
-           │                    │
-           │ N                  │ N
-           ▼                    ▼
-┌──────────────────────┐  ┌──────────────────────┐
-│ despesas_consolidadas│  │  despesas_agregadas  │
-├──────────────────────┤  ├──────────────────────┤
-│ ⚿ id (PK)            │  │ ⚿ id (PK)            │
-│ ⚷ operadora_id (FK)  │  │ ⚷ operadora_id (FK)  │
-│   trimestre          │  │   total_despesas     │
-│   ano                │  │   media_despesas     │
-│   valor_despesas     │  │   desvio_padrao      │
-│   data_registro      │  │   qtd_registros      │
-└──────────────────────┘  └──────────────────────┘
-```
+O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves primárias, estrangeiras, relacionamentos e justificativas de modelagem entre as tabelas de operadoras e despesas pode ser visualizado no link abaixo:
+
+👉 **[Ver Diagrama de Entidade-Relacionamento (ER)](docs/diagrama_er.md)**
 
 ### Índices Criados
 
@@ -356,57 +328,3 @@ HAVING SUM(acima) >= 2;
 - **MySQL 8.0+** (Alternativa) - Compatibilidade, mas sem algumas features
 - **Scripts SQL** - DDL, DML, DQL separados
 - **UTF-8** - Encoding consistente
-
----
-
-## 📝 Observações
-
-### Diferenças PostgreSQL vs MySQL
-
-| Feature              | PostgreSQL    | MySQL             |
-| -------------------- | ------------- | ----------------- |
-| **COPY**             | ✅ Nativo     | ❌ Usar LOAD DATA |
-| **Window Functions** | ✅ Completo   | ✅ 8.0+           |
-| **CTEs**             | ✅ Recursivas | ✅ Não recursivas |
-| **RETURNING**        | ✅            | ❌                |
-| **Arrays**           | ✅            | ❌                |
-
-**Recomendação:** PostgreSQL para análises complexas.
-
----
-
-## 🔍 Validação
-
-### Checklist de Importação
-
-```sql
--- Verificar contagens
-SELECT 'operadoras' as tabela, COUNT(*) FROM operadoras
-UNION ALL
-SELECT 'consolidadas', COUNT(*) FROM despesas_consolidadas
-UNION ALL
-SELECT 'agregadas', COUNT(*) FROM despesas_agregadas;
-
--- Verificar integridade referencial
-SELECT COUNT(*) as orphans
-FROM despesas_consolidadas dc
-LEFT JOIN operadoras o ON dc.operadora_id = o.id
-WHERE o.id IS NULL;
-
--- Verificar valores NULL indevidos
-SELECT COUNT(*) as nulls_invalidos
-FROM despesas_consolidadas
-WHERE valor_despesas IS NULL;
-```
-
-### Resultados Esperados
-
-| Tabela                | Registros Esperados |
-| --------------------- | ------------------- |
-| operadoras            | ~1.000-1.500        |
-| despesas_consolidadas | ~2.100.000          |
-| despesas_agregadas    | ~781                |
-
----
-
-**Desenvolvido para Intuitive Care** 🚀

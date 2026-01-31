@@ -4,9 +4,9 @@ SET client_encoding = 'UTF8';
 \echo 'QUERIES ANALÍTICAS - RELATÓRIO FINAL'
 \echo '============================================================'
 
--- QUERY 1: Crescimento (Fix: operadora_id no JOIN)
+-- Query 1: Crescimento
 \echo ''
-\echo 'QUERY 1: Top 5 Operadoras com Maior Crescimento (Início vs Fim de 2024)'
+\echo 'Query 1: Top 5 Operadoras com maior crescimento (Início vs Fim de 2024)'
 WITH limites AS (
     SELECT operadora_id, MIN(ano*10+trimestre) as min_p, MAX(ano*10+trimestre) as max_p
     FROM despesas_consolidadas GROUP BY operadora_id
@@ -18,7 +18,6 @@ dados_crescimento AS (
         SUM(CASE WHEN (dc.ano*10+dc.trimestre) = l.max_p THEN dc.valor_despesas ELSE 0 END) as v_final
     FROM despesas_consolidadas dc
     JOIN operadoras o ON dc.operadora_id = o.id
-    -- AJUSTE AQUI: Usando operadora_id em vez de id
     JOIN limites l ON dc.operadora_id = l.operadora_id 
     GROUP BY o.razao_social, o.uf, l.min_p, l.max_p
     HAVING SUM(CASE WHEN (dc.ano*10+dc.trimestre) = l.min_p THEN dc.valor_despesas ELSE 0 END) > 0
@@ -32,9 +31,9 @@ FROM dados_crescimento
 WHERE v_final > v_inicial
 ORDER BY 5 DESC LIMIT 5;
 
--- QUERY 2: Distribuição por UF
+-- Query 2: Distribuição por UF
 \echo ''
-\echo 'QUERY 2: Distribuição por UF (Top 5 por Volume)'
+\echo 'Query 2: Distribuição de despesas por UF (Top 5 por Volume)'
 SELECT 
     o.uf as "UF",
     ROUND(SUM(dc.valor_despesas)::NUMERIC, 2) as "Total Despesas (R$)",
@@ -46,9 +45,9 @@ WHERE o.uf ~ '^[A-Z]{2}$'
 GROUP BY o.uf
 ORDER BY 2 DESC LIMIT 5;
 
--- QUERY 3: Acima da Média
+-- Query 3: Acima da Média
 \echo ''
-\echo 'QUERY 3: Operadoras Acima da Média em 2+ Trimestres'
+\echo 'Query 3: Operadoras com despesas acima da média geral em 2 ou 3 Trimestres'
 WITH media_trim AS (
     SELECT ano, trimestre, AVG(valor_despesas) as m_geral 
     FROM despesas_consolidadas GROUP BY ano, trimestre
@@ -67,9 +66,9 @@ FROM status_op GROUP BY razao_social
 HAVING SUM(acima) >= 2
 ORDER BY 2 DESC, 1 LIMIT 10;
 
--- BÔNUS: Totais Gerais
+-- Bônus: Totais Gerais
 \echo ''
-\echo 'BÔNUS: Consolidação Geral 2024'
+\echo 'Bônus: Consolidação Geral 2024'
 SELECT 
     ano as "Ano", trimestre as "Tri", 
     COUNT(DISTINCT operadora_id) as "Ops", 

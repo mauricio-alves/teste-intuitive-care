@@ -1,10 +1,10 @@
 SET client_encoding = 'UTF8';
 
 \echo '============================================================'
-\echo 'INICIANDO IMPORTAÇÃO DE DADOS (VERSÃO FINAL - BUG FIX)'
+\echo 'INICIANDO IMPORTAÇÃO DE DADOS'
 \echo '============================================================'
 
--- 1/3 IMPORTANDO CADASTRO DE OPERADORAS
+-- 1/3 Importando cadastro de operadoras
 \echo '1/3 Importando cadastro de operadoras...'
 CREATE TEMP TABLE temp_operadoras_raw (linha TEXT);
 \COPY temp_operadoras_raw FROM '/input_t2_temp/operadoras_cadastro.csv' WITH (FORMAT text);
@@ -24,13 +24,13 @@ SELECT
     END
 FROM temp_operadoras_raw
 WHERE (string_to_array(linha, ';'))[3] IS NOT NULL 
-AND (string_to_array(linha, ';'))[3] NOT ILIKE '%Razão Social%' -- Evita cabeçalhos fantasmas
+AND (string_to_array(linha, ';'))[3] NOT ILIKE '%Razão Social%' 
 ON CONFLICT (cnpj) DO UPDATE SET razao_social = EXCLUDED.razao_social;
 
 SELECT COUNT(*) as total_operadoras FROM operadoras;
 DROP TABLE temp_operadoras_raw;
 
--- 2/3 IMPORTANDO DESPESAS CONSOLIDADAS (Onde estava o erro)
+-- 2/3 Importando despesas consolidadas
 \echo ''
 \echo '2/3 Importando despesas consolidadas...'
 CREATE TEMP TABLE temp_despesas (reg_ans TEXT, cnpj TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
@@ -44,14 +44,14 @@ SELECT
     COALESCE(REGEXP_REPLACE(TRIM(td.valor), '[^0-9.]', '', 'g'), '0')::DECIMAL(15,2),
     TRIM(td.status)
 FROM temp_despesas td
--- JOIN OTIMIZADO: Evita duplicidade usando apenas o Registro ANS como chave principal
+-- Evita duplicidade usando apenas o Registro ANS como chave principal
 INNER JOIN operadoras o ON (REGEXP_REPLACE(td.reg_ans, '[^0-9]', '', 'g') = o.registro_ans)
 WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' AND TRIM(td.ano) ~ '^[0-9]{4}$';
 
 SELECT COUNT(*) as total_despesas_reais FROM despesas_consolidadas;
 DROP TABLE temp_despesas;
 
--- 3/3 IMPORTANDO DESPESAS AGREGADAS
+-- 3/3 Importando despesas agregadas
 \echo ''
 \echo '3/3 Importando despesas agregadas...'
 CREATE TEMP TABLE temp_agregadas (

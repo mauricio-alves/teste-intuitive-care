@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import os
 
 def preparar_ambiente():
+    # Criar diretório temporário
     temp_path = "temp/"
     os.makedirs(temp_path, exist_ok=True)
     
