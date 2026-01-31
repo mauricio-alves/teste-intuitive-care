@@ -101,7 +101,10 @@ SELECT
     NULLIF(TRIM(ta.desvio), '')::DECIMAL(15,2),
     COALESCE(NULLIF(REGEXP_REPLACE(ta.qtd, '[^0-9]', '', 'g'), ''), '0')::INTEGER
 FROM temp_agregadas ta
-INNER JOIN operadoras o ON (o.razao_social = UPPER(TRIM(ta.razao)))
+INNER JOIN operadoras o ON (
+    o.razao_social = UPPER(TRIM(ta.razao)) 
+    AND o.uf = UPPER(TRIM(ta.uf))
+)
 WHERE NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '') IS NOT NULL 
     AND NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '')::INTEGER > 0
 ON CONFLICT DO NOTHING;

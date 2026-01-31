@@ -58,6 +58,7 @@ media_trim AS (
 ),
 status_op AS (
     SELECT 
+        t.operadora_id,
         o.razao_social, t.ano, t.trimestre,
         CASE WHEN t.total_op_trim > mt.m_geral THEN 1 ELSE 0 END as acima
     FROM totais_op t
@@ -65,9 +66,10 @@ status_op AS (
     JOIN media_trim mt ON t.ano = mt.ano AND t.trimestre = mt.trimestre
 )
 SELECT razao_social as "Operadora", SUM(acima) as "Trimestres Acima da Média"
-FROM status_op GROUP BY razao_social
-HAVING SUM(acima) >= 2
-ORDER BY 2 DESC, 1 LIMIT 10;
+FROM status_op 
+GROUP BY operadora_id, razao_social
+ORDER BY 2 DESC, 1 ASC
+LIMIT 10;
 
 -- Bônus: Totais Gerais
 \echo ''

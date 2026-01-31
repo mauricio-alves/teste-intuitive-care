@@ -329,14 +329,17 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 
 ## ⚡ Performance Esperada
 
-| Operação               | Tempo Esperado | Volume         |
-| ---------------------- | -------------- | -------------- |
-| DDL (criação)          | ~1s            | 4 tabelas      |
-| Import consolidadas    | ~17-18min      | 2.1M registros |
-| Import agregadas       | ~1s            | 781 registros  |
-| Query 1 (crescimento)  | ~2-5s          | 2.1M registros |
-| Query 2 (distribuição) | ~1-3s          | Com índices    |
-| Query 3 (acima média)  | ~10s           | CTE otimizado  |
+| Operação               | Tempo Esperado | Volume                       |
+| ---------------------- | -------------- | ---------------------------- |
+| DDL (criação)          | ~1.5s          | 4 tabelas                    |
+| Import consolidadas    | ~21-22min      | 2.1M registros               |
+| Import agregadas       | ~1s            | 781 registros                |
+| Criação de Índices     | ~1.6s          | 9 índices                    |
+| Query 1 (crescimento)  | ~2-5s          | 2.1M registros               |
+| Query 2 (distribuição) | ~1-3s          | 2.1M registros (com índices) |
+| Query 3 (acima média)  | ~10s           | CTE otimizado                |
+
+> **Nota**: Testes realizados em ambiente Docker utilizando volumes mapeados. A performance das queries pode variar levemente dependendo das especificações de hardware (CPU/SSD) disponíveis para o container..
 
 ---
 

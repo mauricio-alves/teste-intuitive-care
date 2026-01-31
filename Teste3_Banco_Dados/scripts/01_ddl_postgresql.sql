@@ -124,7 +124,7 @@ ORDER BY tablename, indexname;
 
 \echo '✓ Estrutura de banco de dados criada com sucesso!'
 \echo '✓ 4 tabelas criadas: operadoras, despesas_consolidadas, despesas_agregadas, import_errors'
-\echo '✓ Índices otimizados criados'
+\echo '✓ Índices de constraints criados (execute o script 03 após a carga para os demais índices)'
 \echo '✓ Constraints de integridade aplicadas'
 \echo ''
 \echo 'Próximo passo: Executar 02_import_postgresql.sql'

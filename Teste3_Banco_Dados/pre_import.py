@@ -7,6 +7,7 @@ def preparar_ambiente():
     # Função para preparar o ambiente baixando o arquivo CSV mais recente
     temp_path = "temp/"
     os.makedirs(temp_path, exist_ok=True)
+    MAX_BYTES = 50 * 1024 * 1024 
     
     urls = [
         "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/",
@@ -15,6 +16,7 @@ def preparar_ambiente():
     
     print("🚀 Preparando ambiente para Teste 3...")
     for url_base in urls:
+        downloaded_bytes = 0
         try:
             response = requests.get(url_base, timeout=20)
             response.raise_for_status()
@@ -32,6 +34,9 @@ def preparar_ambiente():
                     r.raise_for_status()
                     with open(os.path.join(temp_path, "operadoras_cadastro.csv"), 'wb') as f:
                         for chunk in r.iter_content(chunk_size=8192):
+                            downloaded_bytes += len(chunk)
+                            if downloaded_bytes > MAX_BYTES:
+                                raise Exception("Arquivo de operadoras excede o limite de segurança.")
                             f.write(chunk)
                 print("✅ Cadastro pronto para importação.")
                 return
