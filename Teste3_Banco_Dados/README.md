@@ -186,10 +186,10 @@ operadoras (1) ----< (N) despesas_agregadas
    - **Justificativa:** Preserva dados válidos, descarta inválidos
    - **Implementação:** `NULLIF` + `CAST` com tratamento de erro
 
-3. **Datas em formatos variados** (ex: "2024-03-31", "31/03/2024")
-   - **Estratégia:** Conversão com múltiplos formatos
-   - **Justificativa:** Dados da ANS podem ter formatos mistos
-   - **Implementação:** `TO_DATE` com `COALESCE` de formatos
+3. **Cabeçalhos duplicados nos CSVs**
+   - **Estratégia:** DELETE em tabela temporária antes do INSERT
+   - **Justificativa:** Evita inserção de strings ("Registro ANS") em campos de dados
+   - **Implementação:** `DELETE FROM temp_operadoras_raw WHERE linha ILIKE '%Registro ANS%'`
 
 **Log de Erros:**
 
