@@ -33,7 +33,7 @@ DROP TABLE temp_operadoras_raw;
 -- 2/3 Importando despesas consolidadas
 \echo ''
 \echo '2/3 Importando despesas consolidadas...'
-CREATE TEMP TABLE temp_despesas (reg_ans TEXT, cnpj TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
+CREATE TEMP TABLE temp_despesas (cnpj TEXT, razao TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
 \COPY temp_despesas FROM '/input_t1/consolidado_despesas.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',');
 
 INSERT INTO despesas_consolidadas (operadora_id, trimestre, ano, valor_despesas, validacao_valor)
@@ -41,11 +41,11 @@ SELECT
     o.id,
     REGEXP_REPLACE(td.tri, '[^0-9]', '', 'g')::INTEGER,
     REGEXP_REPLACE(td.ano, '[^0-9]', '', 'g')::INTEGER,
-    COALESCE(REGEXP_REPLACE(TRIM(td.valor), '[^0-9.]', '', 'g'), '0')::DECIMAL(15,2),
+    COALESCE(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), '0')::DECIMAL(15,2),
     TRIM(td.status)
 FROM temp_despesas td
 -- Evita duplicidade usando apenas o Registro ANS como chave principal
-INNER JOIN operadoras o ON (REGEXP_REPLACE(td.reg_ans, '[^0-9]', '', 'g') = o.registro_ans)
+INNER JOIN operadoras o ON (REGEXP_REPLACE(td.cnpj, '[^0-9]', '', 'g') = o.cnpj);
 WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' AND TRIM(td.ano) ~ '^[0-9]{4}$';
 
 SELECT COUNT(*) as total_despesas_reais FROM despesas_consolidadas;

@@ -197,10 +197,10 @@ operadoras (1) ----< (N) despesas_agregadas
 -- Tabela de importação com erros
 CREATE TABLE import_errors (
     id SERIAL PRIMARY KEY,
-    tabela VARCHAR(100),
-    linha_original TEXT,
+    tabela_destino VARCHAR(100),
+    linha_csv TEXT,
     erro TEXT,
-    data_import TIMESTAMP DEFAULT NOW()
+    data_import TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -298,7 +298,7 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 | despesas_agregadas    | `idx_agregadas_uf`                 | INDEX        | Análises por UF     |
 | despesas_agregadas    | `idx_agregadas_total`              | INDEX (DESC) | Top N queries       |
 
-**Nota:** Constraints `UNIQUE` nas colunas `cnpj` e `registro_ans` criam índices únicos automaticamente no PostgreSQL. Os índices adicionais `idx_operadoras_cnpj` e `idx_operadoras_registro` mencionados no DDL são redundantes e podem ser omitidos em ambientes de produção para economizar espaço e melhorar performance de escrita.
+**Nota:** Constraints `UNIQUE` nas colunas `cnpj` e `registro_ans` criam índices únicos automaticamente no PostgreSQL.
 
 ---
 

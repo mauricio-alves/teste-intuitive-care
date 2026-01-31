@@ -116,7 +116,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
-COMMENT ON FUNCTION get_periodo_trimestre IS 'Retorna label de período (ex: 2024-T3)';
+COMMENT ON FUNCTION get_periodo_trimestre(INTEGER, INTEGER) IS 'Retorna label de período (ex: 2024-T3)';
 
 -- Listar tabelas criadas
 SELECT 

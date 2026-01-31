@@ -9,7 +9,7 @@ SET client_encoding = 'UTF8';
 \echo 'Query 1: Top 5 Operadoras com maior crescimento (Início vs Fim de 2024)'
 WITH limites AS (
     SELECT operadora_id, MIN(ano*10+trimestre) as min_p, MAX(ano*10+trimestre) as max_p
-    FROM despesas_consolidadas GROUP BY operadora_id
+    FROM despesas_consolidadas WHERE ano = 2024 GROUP BY operadora_id
 ),
 dados_crescimento AS (
     SELECT 
@@ -73,4 +73,4 @@ SELECT
     ano as "Ano", trimestre as "Tri", 
     COUNT(DISTINCT operadora_id) as "Ops", 
     ROUND(SUM(valor_despesas)::NUMERIC, 2) as "Total (R$)"
-FROM despesas_consolidadas GROUP BY 1, 2 ORDER BY 1, 2;
+FROM despesas_consolidadas WHERE ano = 2024 GROUP BY 1, 2 ORDER BY 1, 2;

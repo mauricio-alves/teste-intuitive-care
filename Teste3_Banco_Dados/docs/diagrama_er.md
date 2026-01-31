@@ -77,8 +77,6 @@
 ### Operadoras
 
 ```sql
-CREATE INDEX idx_operadoras_cnpj ON operadoras(cnpj);
-CREATE INDEX idx_operadoras_registro ON operadoras(registro_ans);
 CREATE INDEX idx_operadoras_uf ON operadoras(uf);
 ```
 
