@@ -19,9 +19,11 @@ SELECT
     UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[3])), 
     TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[5]), 
     CASE 
-        WHEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11])) ~ '^[A-Z]{2}$' THEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11]))
-        ELSE UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[10]))
-        ELSE NULL
+        WHEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11])) ~ '^[A-Z]{2}$' 
+            THEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11]))
+        WHEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[10])) ~ '^[A-Z]{2}$' 
+            THEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[10]))
+        ELSE NULL 
     END
 FROM temp_operadoras_raw
 WHERE (string_to_array(linha, ';'))[3] IS NOT NULL 
@@ -34,7 +36,7 @@ DROP TABLE temp_operadoras_raw;
 -- 2/3 Importando despesas consolidadas
 \echo ''
 \echo '2/3 Importando despesas consolidadas...'
-CREATE TEMP TABLE temp_despesas (cnpj TEXT, razao TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
+CREATE TEMP TABLE temp_despesas (id_csv TEXT, razao TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
 \COPY temp_despesas FROM '/input_t1/consolidado_despesas.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',');
 
 INSERT INTO despesas_consolidadas (operadora_id, trimestre, ano, valor_despesas, validacao_valor)
@@ -45,8 +47,8 @@ SELECT
     COALESCE(NULLIF(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), ''), '0')::DECIMAL(15,2),
     TRIM(td.status)
 FROM temp_despesas td
--- Evita duplicidade usando apenas o Registro ANS como chave principal
-INNER JOIN operadoras o ON (REGEXP_REPLACE(td.cnpj, '[^0-9]', '', 'g') = o.cnpj)
+-- Para evitar duplicidade em reexecuções, recomenda-se rodar o 99_limpeza.sql antes.
+INNER JOIN operadoras o ON (REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g') = o.registro_ans)
 WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' AND TRIM(td.ano) ~ '^[0-9]{4}$';
 
 SELECT COUNT(*) as total_despesas_reais FROM despesas_consolidadas;
@@ -70,6 +72,8 @@ SELECT
     COALESCE(NULLIF(TRIM(ta.qtd), ''), '0')::INTEGER
 FROM temp_agregadas ta
 INNER JOIN operadoras o ON (o.razao_social = UPPER(TRIM(ta.razao)))
+WHERE NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '') IS NOT NULL 
+  AND NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '')::INTEGER > 0
 ON CONFLICT DO NOTHING;
 
 SELECT COUNT(*) as total_agregadas FROM despesas_agregadas;

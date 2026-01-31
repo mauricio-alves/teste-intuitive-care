@@ -21,20 +21,20 @@ SET
 +----+---------------------+----------------+--------------------------+
 (5 rows)
 
-+----------------------------------------------------------------------------------+---------------------------+
-|                                    Operadora                                     | Trimestres Acima da Média |
-+----------------------------------------------------------------------------------+---------------------------+
-| 2CARE OPERADORA DE SAÚDE LTDA.                                                   |                         3 |
-| ABERTTA SAÚDE - ASSOCIAÇÃO BENEFICENTE DOS EMPREGADOS DA ARCELORMITTAL NO BRASIL |                         3 |
-| ADVANCE PLANOS DE SAÚDE LTDA                                                     |                         3 |
-| AESP ODONTO ASSISTÊNCIA ODONTOLÓGICA S/S LTDA EPP                                |                         3 |
-| AFFIX ADMINISTRADORA DE BENEFÍCIOS LTDA                                          |                         3 |
-| AGROS - INSTITUTO UFV DE SEGURIDADE SOCIAL                                       |                         3 |
-| ALICE OPERADORA LTDA.                                                            |                         3 |
-| ALLCARE ADMINISTRADORA DE BENEFÍCIOS EM SAÚDE LTDA.                              |                         3 |
-| ALL CARE ADMINISTRADORA DE BENEFÍCIOS SÃO PAULO LTDA                             |                         3 |
-| ALLIANZ SAÚDE S/A                                                                |                         3 |
-+----------------------------------------------------------------------------------+---------------------------+
++---------------------------------------------------------------------------------------------+---------------------------+
+|                                          Operadora                                          | Trimestres Acima da Média |
++---------------------------------------------------------------------------------------------+---------------------------+
+| AMIL ASSISTÊNCIA MÉDICA INTERNACIONAL S.A.                                                  |                         3 |
+| ASSOCIAÇÃO ADVENTISTA NORTE BRASILEIRA DE PREVENÇÃO E ASSISTÊNCIA A SAÚDE                   |                         3 |
+| ASSOCIAÇÃO BENEFICENTE DOS PROFESSORES PÚBLICOS ATIVOS E INATIVOS DO RIO DE JANEIRO - APPAI |                         3 |
+| ASSOCIAÇÃO DE BENEFICÊNCIA E FILANTROPIA SÃO CRISTOVÃO                                      |                         3 |
+| ASSOCIAÇÃO PETROBRAS DE SAÚDE - APS                                                         |                         3 |
+| BENEFICENCIA CAMILIANA DO SUL                                                               |                         3 |
+| BRADESCO SAÚDE - OPERADORA DE PLANOS  S/A                                                   |                         3 |
+| BRADESCO SAÚDE S.A.                                                                         |                         3 |
+| CAIXA BENEFICENTE DOS FUNCIONARIOS DO BANCO DO ESTADO DE SÃO PAULO                          |                         3 |
+| CAIXA DE ASSISTÊNCIA DOS EMPREGADOS DO BANCO DO ESTADO DO RIO GRANDE DO SUL                 |                         3 |
++---------------------------------------------------------------------------------------------+---------------------------+
 (10 rows)
 
 +------+-----+-----+------------------+

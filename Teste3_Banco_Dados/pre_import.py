@@ -37,3 +37,11 @@ def preparar_ambiente():
             continue
             
     print("⚠️ Aviso: Não foi possível baixar o cadastro. Verifique a conexão.")
+
+if __name__ == "__main__":
+    try:
+        preparar_ambiente()
+    except Exception as e:
+        print(f"❌ Falha crítica na execução: {e}")
+        import sys
+        sys.exit(1) 

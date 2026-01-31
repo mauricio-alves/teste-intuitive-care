@@ -44,7 +44,7 @@ docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/01_dd
 docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/02_import_postgresql.sql
 
 # Executar queries analíticas
-docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql
+docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql --pset pager=off
 
 # Gerar relatório final
 docker exec ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt

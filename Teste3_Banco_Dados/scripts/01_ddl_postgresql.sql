@@ -125,7 +125,7 @@ SELECT
     tableowner
 FROM pg_catalog.pg_tables
 WHERE schemaname = 'public'
-  AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas')
+  AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas', 'import_errors')
 ORDER BY tablename;
 
 -- Listar índices criados
@@ -135,7 +135,7 @@ SELECT
     indexdef
 FROM pg_indexes
 WHERE schemaname = 'public'
-  AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas')
+  AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas', 'import_errors')
 ORDER BY tablename, indexname;
 
 \echo '✓ Estrutura de banco de dados criada com sucesso!'
