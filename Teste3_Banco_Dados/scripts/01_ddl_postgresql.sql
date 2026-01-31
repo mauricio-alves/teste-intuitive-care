@@ -139,7 +139,7 @@ WHERE schemaname = 'public'
 ORDER BY tablename, indexname;
 
 \echo '✓ Estrutura de banco de dados criada com sucesso!'
-\echo '✓ 3 tabelas criadas: operadoras, despesas_consolidadas, despesas_agregadas'
+\echo '✓ 4 tabelas criadas: operadoras, despesas_consolidadas, despesas_agregadas, import_errors'
 \echo '✓ Índices otimizados criados'
 \echo '✓ Constraints de integridade aplicadas'
 \echo ''

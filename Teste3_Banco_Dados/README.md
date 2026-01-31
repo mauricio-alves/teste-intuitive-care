@@ -55,6 +55,15 @@ docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/99_li
 
 ### Opção 2: PostgreSQL (Manual/Local)
 
+> **Aviso**: O script `02_import_postgresql.sql` utiliza caminhos absolutos do Docker (ex: `/input_t1`). Para execução local, altere os caminhos no SQL para os diretórios reais de saída do Teste 1 e Teste 2.
+
+### Índices Criados (Nomes Alinhados ao DDL)
+
+| Tabela                | Índice               | Justificativa     |
+| --------------------- | -------------------- | ----------------- |
+| despesas_consolidadas | `idx_despesas_data`  | Filtros temporais |
+| despesas_consolidadas | `idx_despesas_valor` | Ordenações        |
+
 ```bash
 # Criar o banco de dados
 psql -U postgres -c "CREATE DATABASE ans_dados;"

@@ -21,6 +21,7 @@ SELECT
     CASE 
         WHEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11])) ~ '^[A-Z]{2}$' THEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11]))
         ELSE UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[10]))
+        ELSE NULL
     END
 FROM temp_operadoras_raw
 WHERE (string_to_array(linha, ';'))[3] IS NOT NULL 
@@ -63,10 +64,10 @@ CREATE TEMP TABLE temp_agregadas (
 INSERT INTO despesas_agregadas (operadora_id, uf, total_despesas, media_despesas, desvio_padrao, qtd_registros)
 SELECT 
     o.id, UPPER(TRIM(ta.uf)),
-    NULLIF(TRIM(ta.total), '')::DECIMAL(18,2),
+    COALESCE(NULLIF(TRIM(ta.total), ''), '0')::DECIMAL(18,2),
     NULLIF(TRIM(ta.media), '')::DECIMAL(15,2),
     NULLIF(TRIM(ta.desvio), '')::DECIMAL(15,2),
-    NULLIF(TRIM(ta.qtd), '')::INTEGER
+    COALESCE(NULLIF(TRIM(ta.qtd), ''), '0')::INTEGER
 FROM temp_agregadas ta
 INNER JOIN operadoras o ON (o.razao_social = UPPER(TRIM(ta.razao)))
 ON CONFLICT DO NOTHING;

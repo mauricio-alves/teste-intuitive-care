@@ -47,19 +47,22 @@ ORDER BY 2 DESC LIMIT 5;
 
 -- Query 3: Acima da Média
 \echo ''
-\echo 'Query 3: Operadoras com despesas acima da média geral em 2 ou 3 Trimestres'
-WITH media_trim AS (
-    SELECT ano, trimestre, AVG(valor_despesas) as m_geral 
-    FROM despesas_consolidadas GROUP BY ano, trimestre
+\echo 'Query 3: Operadoras com despesas acima da média dos totais por operadora em 2 ou 3 Trimestres de 2024'
+WITH totais_op AS (
+    SELECT ano, trimestre, operadora_id, SUM(valor_despesas) AS total_op_trim
+    FROM despesas_consolidadas WHERE ano = 2024 GROUP BY ano, trimestre, operadora_id
+),
+media_trim AS (
+    SELECT ano, trimestre, AVG(total_op_trim) as m_geral 
+    FROM totais_op GROUP BY ano, trimestre
 ),
 status_op AS (
     SELECT 
-        o.razao_social, dc.ano, dc.trimestre,
-        CASE WHEN SUM(dc.valor_despesas) > MAX(mt.m_geral) THEN 1 ELSE 0 END as acima
-    FROM despesas_consolidadas dc
-    JOIN operadoras o ON dc.operadora_id = o.id
-    JOIN media_trim mt ON dc.ano = mt.ano AND dc.trimestre = mt.trimestre
-    GROUP BY o.razao_social, dc.ano, dc.trimestre
+        o.razao_social, t.ano, t.trimestre,
+        CASE WHEN t.total_op_trim > mt.m_geral THEN 1 ELSE 0 END as acima
+    FROM totais_op t
+    JOIN operadoras o ON t.operadora_id = o.id
+    JOIN media_trim mt ON t.ano = mt.ano AND t.trimestre = mt.trimestre
 )
 SELECT razao_social as "Operadora", SUM(acima) as "Trimestres Acima da Média"
 FROM status_op GROUP BY razao_social
