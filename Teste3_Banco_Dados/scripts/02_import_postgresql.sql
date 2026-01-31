@@ -14,8 +14,8 @@ DELETE FROM temp_operadoras_raw WHERE linha ILIKE '%Registro ANS%';
 
 INSERT INTO operadoras (registro_ans, cnpj, razao_social, modalidade, uf)
 SELECT 
-    REGEXP_REPLACE((string_to_array(linha, ';'))[1], '[^0-9]', '', 'g'), 
-    REGEXP_REPLACE((string_to_array(linha, ';'))[2], '[^0-9]', '', 'g'), 
+    NULLIF(REGEXP_REPLACE((string_to_array(linha, ';'))[1], '[^0-9]', '', 'g'), ''),
+    NULLIF(REGEXP_REPLACE((string_to_array(linha, ';'))[2], '[^0-9]', '', 'g'), ''),
     UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[3])), 
     TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[5]), 
     CASE 

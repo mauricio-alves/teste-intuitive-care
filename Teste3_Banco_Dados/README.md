@@ -23,7 +23,7 @@ O Teste 3 depende dos artefatos gerados nos testes anteriores. Certifique-se de 
 ### Configuração de Credenciais
 
 1. **Copie o arquivo de exemplo**: `cp .env.example .env`
-2. **(Opcional) Edite o .env**: Abra o arquivo e insira suas credenciais preferidas para o banco de dados.
+2. **Edite o .env**: Defina valores para `POSTGRES_USER`, `POSTGRES_DB` e `POSTGRES_PASSWORD`. O Docker Compose falhará se estiverem vazios.
 3. **Localização**: Certifique-se de que o arquivo `.env` está localizado na raiz da pasta `Teste3_Banco_Dados`.
 
 ### Opção 1: Docker (Recomendado)

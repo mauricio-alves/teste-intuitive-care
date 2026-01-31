@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS despesas_agregadas (
     
     CONSTRAINT fk_operadora_agregada FOREIGN KEY (operadora_id) 
         REFERENCES operadoras(id) ON DELETE CASCADE,
+    CONSTRAINT chk_uf_agregada CHECK (uf ~ '^[A-Z]{2}$'),
     CONSTRAINT chk_qtd_positiva CHECK (qtd_registros > 0),
     CONSTRAINT uq_operadora_uf UNIQUE (operadora_id, uf)  
 );
