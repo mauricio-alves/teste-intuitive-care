@@ -212,7 +212,7 @@ CREATE TABLE import_errors (
 
 **Desafio:** Operadoras sem dados em todos os trimestres
 
-**Estratégia Escolhida:** **Exigir dados no 1º e último trimestre**
+**Estratégia Escolhida:** **Comparar o 1º vs último trimestre disponível de 2024 para cada operadora**
 
 **Justificativa:**
 
@@ -292,8 +292,8 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 | operadoras            | `registro_ans` (constraint)        | UNIQUE       | Garante unicidade   |
 | operadoras            | `idx_operadoras_uf`                | INDEX        | Análises por estado |
 | despesas_consolidadas | `idx_despesas_operadora_trimestre` | INDEX (comp) | Queries analíticas  |
-| despesas_consolidadas | `idx_data`                         | INDEX        | Filtros temporais   |
-| despesas_consolidadas | `idx_valor`                        | INDEX        | Ordenações          |
+| despesas_consolidadas | `idx_despesas_data`                | INDEX        | Filtros temporais   |
+| despesas_consolidadas | `idx_despesas_valor`               | INDEX        | Ordenações          |
 | despesas_agregadas    | `idx_agregadas_operadora`          | INDEX        | JOINs               |
 | despesas_agregadas    | `idx_agregadas_uf`                 | INDEX        | Análises por UF     |
 | despesas_agregadas    | `idx_agregadas_total`              | INDEX (DESC) | Top N queries       |

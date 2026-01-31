@@ -41,11 +41,11 @@ SELECT
     o.id,
     REGEXP_REPLACE(td.tri, '[^0-9]', '', 'g')::INTEGER,
     REGEXP_REPLACE(td.ano, '[^0-9]', '', 'g')::INTEGER,
-    COALESCE(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), '0')::DECIMAL(15,2),
+    COALESCE(NULLIF(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), ''), '0')::DECIMAL(15,2),
     TRIM(td.status)
 FROM temp_despesas td
 -- Evita duplicidade usando apenas o Registro ANS como chave principal
-INNER JOIN operadoras o ON (REGEXP_REPLACE(td.cnpj, '[^0-9]', '', 'g') = o.cnpj);
+INNER JOIN operadoras o ON (REGEXP_REPLACE(td.cnpj, '[^0-9]', '', 'g') = o.cnpj)
 WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' AND TRIM(td.ano) ~ '^[0-9]{4}$';
 
 SELECT COUNT(*) as total_despesas_reais FROM despesas_consolidadas;

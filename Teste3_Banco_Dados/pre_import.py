@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 import os
 
 def preparar_ambiente():
-    # Criar diretório temporário
+    # Função para preparar o ambiente baixando o arquivo CSV mais recente
     temp_path = "temp/"
     os.makedirs(temp_path, exist_ok=True)
     
@@ -24,7 +24,8 @@ def preparar_ambiente():
             if links:
                 url_dl = links[-1]
                 print(f"📥 Descarregando cadastro: {url_dl}")
-                with requests.get(url_dl, stream=True) as r:
+                
+                with requests.get(url_dl, stream=True, timeout=60) as r:
                     r.raise_for_status()
                     with open(os.path.join(temp_path, "operadoras_cadastro.csv"), 'wb') as f:
                         for chunk in r.iter_content(chunk_size=8192):
@@ -32,8 +33,7 @@ def preparar_ambiente():
                 print("✅ Cadastro pronto para importação.")
                 return
         except Exception as e:
+            print(f"❌ Erro ao acessar {url_base}: {e}")
             continue
+            
     print("⚠️ Aviso: Não foi possível baixar o cadastro. Verifique a conexão.")
-
-if __name__ == "__main__":
-    preparar_ambiente()

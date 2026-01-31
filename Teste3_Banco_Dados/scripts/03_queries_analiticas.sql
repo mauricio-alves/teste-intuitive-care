@@ -6,7 +6,7 @@ SET client_encoding = 'UTF8';
 
 -- Query 1: Crescimento
 \echo ''
-\echo 'Query 1: Top 5 Operadoras com maior crescimento (Início vs Fim de 2024)'
+\echo 'Query 1: Top 5 Operadoras com maior crescimento (1º vs último trimestre disponível de 2024 por operadora)'
 WITH limites AS (
     SELECT operadora_id, MIN(ano*10+trimestre) as min_p, MAX(ano*10+trimestre) as max_p
     FROM despesas_consolidadas WHERE ano = 2024 GROUP BY operadora_id

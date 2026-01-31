@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS operadoras (
 );
 
 -- Índices para performance
-CREATE INDEX idx_operadoras_uf ON operadoras(uf);
+CREATE INDEX IF NOT EXISTS idx_operadoras_uf ON operadoras(uf);
 
 COMMENT ON TABLE operadoras IS 'Cadastro de operadoras de planos de saúde da ANS';
 COMMENT ON COLUMN operadoras.registro_ans IS 'Código único de 6 dígitos da ANS';
@@ -41,10 +41,10 @@ CREATE TABLE IF NOT EXISTS despesas_consolidadas (
 );
 
 -- Índices compostos para queries analíticas
-CREATE INDEX idx_despesas_operadora_trimestre 
+CREATE INDEX IF NOT EXISTS idx_despesas_operadora_trimestre 
     ON despesas_consolidadas(operadora_id, ano, trimestre);
-CREATE INDEX idx_despesas_data ON despesas_consolidadas(data_registro);
-CREATE INDEX idx_despesas_valor ON despesas_consolidadas(valor_despesas);
+CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas_consolidadas(data_registro);
+CREATE INDEX IF NOT EXISTS idx_despesas_valor ON despesas_consolidadas(valor_despesas);
 
 COMMENT ON TABLE despesas_consolidadas IS 'Despesas detalhadas por trimestre (2.1M+ registros)';
 COMMENT ON COLUMN despesas_consolidadas.valor_despesas IS 'DECIMAL para precisão exata em cálculos financeiros';
@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS despesas_agregadas (
 );
 
 -- Índices para análises
-CREATE INDEX idx_agregadas_operadora ON despesas_agregadas(operadora_id);
-CREATE INDEX idx_agregadas_uf ON despesas_agregadas(uf);
-CREATE INDEX idx_agregadas_total ON despesas_agregadas(total_despesas DESC);
+CREATE INDEX IF NOT EXISTS idx_agregadas_operadora ON despesas_agregadas(operadora_id);
+CREATE INDEX IF NOT EXISTS idx_agregadas_uf ON despesas_agregadas(uf);
+CREATE INDEX IF NOT EXISTS idx_agregadas_total ON despesas_agregadas(total_despesas DESC);
 
 COMMENT ON TABLE despesas_agregadas IS 'Despesas pré-agregadas por operadora/UF (~781 registros)';
 COMMENT ON COLUMN despesas_agregadas.total_despesas IS 'DECIMAL(18,2) para somas grandes sem overflow';
@@ -84,8 +84,8 @@ CREATE TABLE IF NOT EXISTS import_errors (
     data_import TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_errors_tabela ON import_errors(tabela_destino);
-CREATE INDEX idx_errors_data ON import_errors(data_import);
+CREATE INDEX IF NOT EXISTS idx_errors_tabela ON import_errors(tabela_destino);
+CREATE INDEX IF NOT EXISTS idx_errors_data ON import_errors(data_import);
 
 COMMENT ON TABLE import_errors IS 'Log de erros durante importação de CSVs';
 

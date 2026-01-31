@@ -77,7 +77,7 @@
 ### Operadoras
 
 ```sql
-CREATE INDEX idx_operadoras_uf ON operadoras(uf);
+CREATE INDEX IF NOT EXISTS idx_operadoras_uf ON operadoras(uf);
 ```
 
 **Justificativa:** Buscas frequentes por CNPJ/Registro ANS nos JOINs
@@ -85,10 +85,10 @@ CREATE INDEX idx_operadoras_uf ON operadoras(uf);
 ### Despesas Consolidadas
 
 ```sql
-CREATE INDEX idx_despesas_operadora_trimestre
+CREATE INDEX IF NOT EXISTS idx_despesas_operadora_trimestre
     ON despesas_consolidadas(operadora_id, ano, trimestre);
-CREATE INDEX idx_despesas_data ON despesas_consolidadas(data_registro);
-CREATE INDEX idx_despesas_valor ON despesas_consolidadas(valor_despesas);
+CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas_consolidadas(data_registro);
+CREATE INDEX IF NOT EXISTS idx_despesas_valor ON despesas_consolidadas(valor_despesas);
 ```
 
 **Justificativa:**
@@ -100,8 +100,9 @@ CREATE INDEX idx_despesas_valor ON despesas_consolidadas(valor_despesas);
 ### Despesas Agregadas
 
 ```sql
-CREATE INDEX idx_agregadas_operadora ON despesas_agregadas(operadora_id);
-CREATE INDEX idx_agregadas_uf ON despesas_agregadas(uf);
+CREATE INDEX IF NOT EXISTS idx_agregadas_operadora ON despesas_agregadas(operadora_id);
+CREATE INDEX IF NOT EXISTS idx_agregadas_uf ON despesas_agregadas(uf);
+CREATE INDEX IF NOT EXISTS idx_agregadas_total ON despesas_agregadas(total_despesas DESC);
 ```
 
 **Justificativa:**
