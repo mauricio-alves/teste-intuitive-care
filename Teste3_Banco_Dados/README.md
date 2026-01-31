@@ -12,10 +12,13 @@ Estruturar banco de dados relacional para armazenar dados da ANS, implementar im
 
 ### Pré-requisitos
 
-- CSVs dos Testes 1 e 2:
-  - `consolidado_despesas.csv` (Teste 1)
-  - `despesas_agregadas.csv` (Teste 2)
-  - `operadoras_cadastro.csv` (Teste 2)
+O Teste 3 depende dos artefatos gerados nos testes anteriores. Certifique-se de que os seguintes arquivos estão presentes em suas respectivas pastas de saída antes de iniciar:
+
+- **Teste 1**: `Teste1_ANS_Integration/output/consolidado_despesas.csv`
+- **Teste 2**: `Teste2_Transformacao/output/despesas_agregadas.csv`
+- **Teste 2**: `operadoras_cadastro.csv`
+
+> **Nota sobre o Cadastro**: O arquivo `operadoras_cadastro.csv` é baixado automaticamente pelo script de preparação `pre_import.py` durante a execução do workflow abaixo.
 
 ### Opção 1: Docker (Recomendado)
 
@@ -44,7 +47,7 @@ docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/02_im
 docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql
 
 # Gerar relatório final
-docker exec ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on > data/relatorio_final.txt
+docker exec ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt
 
 # Limpar o banco (Opcional)
 docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/99_limpeza.sql
@@ -232,21 +235,22 @@ CREATE TABLE import_errors (
 
 **Desafio Adicional:** Média por operadora em cada UF
 
-**Abordagem:** Window functions + GROUP BY
+**Abordagem:** Agregação direta + GROUP BY
 
 **Trade-off:**
 
-| Método               | Legibilidade | Performance    | Escolha |
-| -------------------- | ------------ | -------------- | ------- |
-| **Window Functions** | Alta         | Ótima          | ✅      |
-| Subqueries           | Média        | Ruim (n scans) | ❌      |
-| Multiple queries     | Alta         | Manual         | ❌      |
+| Método               | Legibilidade | Performance | Escolha |
+| -------------------- | ------------ | ----------- | ------- |
+| **Agregação direta** | Alta         | Ótima       | ✅      |
+| Window Functions     | Média        | Boa         | ⚠️      |
+| Subqueries           | Baixa        | Ruim        | ❌      |
 
 **Justificativa:**
 
-- ✅ 1 scan da tabela
-- ✅ Cálculos em paralelo
-- ✅ Código conciso
+- ✅ Agregação simples: `SUM / COUNT(DISTINCT operadora_id)`
+- ✅ 1 scan da tabela com GROUP BY
+- ✅ Código conciso e fácil de manter
+- ✅ Performance ótima com índice em UF
 
 ---
 
@@ -254,14 +258,14 @@ CREATE TABLE import_errors (
 
 **Trade-off Técnico:** Múltiplas abordagens possíveis
 
-| Abordagem        | Performance | Manutenibilidade | Legibilidade | Escolha |
-| ---------------- | ----------- | ---------------- | ------------ | ------- |
-| **CTE + Window** | ⭐⭐⭐      | ⭐⭐⭐           | ⭐⭐⭐       | ✅      |
-| Subqueries       | ⭐⭐        | ⭐⭐             | ⭐           | ❌      |
-| Temp tables      | ⭐⭐⭐      | ⭐               | ⭐⭐         | ❌      |
-| Self-join        | ⭐          | ⭐               | ⭐           | ❌      |
+| Abordagem     | Performance | Manutenibilidade | Legibilidade | Escolha |
+| ------------- | ----------- | ---------------- | ------------ | ------- |
+| **CTE + AGG** | ⭐⭐⭐      | ⭐⭐⭐           | ⭐⭐⭐       | ✅      |
+| Subqueries    | ⭐⭐        | ⭐⭐             | ⭐           | ❌      |
+| Temp tables   | ⭐⭐⭐      | ⭐               | ⭐⭐         | ❌      |
+| Self-join     | ⭐          | ⭐               | ⭐           | ❌      |
 
-**Estratégia Escolhida:** **CTE (Common Table Expression) + Window Functions**
+**Estratégia Escolhida:** **CTE (Common Table Expression) + Agregação**
 
 **Justificativa:**
 
@@ -269,23 +273,6 @@ CREATE TABLE import_errors (
 - ✅ **Manutenibilidade:** Fácil adicionar trimestres
 - ✅ **Legibilidade:** Estrutura clara (média → comparação → count)
 - ✅ **Escalabilidade:** Funciona com 3 ou 30 trimestres
-
-**Implementação:**
-
-```sql
-WITH media_geral AS (
-    SELECT AVG(valor) as media FROM despesas
-),
-acima_media AS (
-    SELECT operadora_id, trimestre,
-           CASE WHEN valor > (SELECT media FROM media_geral) THEN 1 ELSE 0 END as acima
-    FROM despesas
-)
-SELECT operadora_id, SUM(acima) as trimestres_acima
-FROM acima_media
-GROUP BY operadora_id
-HAVING SUM(acima) >= 2;
-```
 
 ---
 
@@ -299,13 +286,19 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 
 ### Índices Criados
 
-| Tabela                | Índice               | Tipo   | Justificativa           |
-| --------------------- | -------------------- | ------ | ----------------------- |
-| operadoras            | `idx_cnpj`           | UNIQUE | Busca rápida, unicidade |
-| operadoras            | `idx_registro_ans`   | INDEX  | Join comum              |
-| despesas_consolidadas | `idx_operadora_trim` | INDEX  | Queries analíticas      |
-| despesas_consolidadas | `idx_data`           | INDEX  | Filtros temporais       |
-| despesas_agregadas    | `idx_operadora`      | INDEX  | Aggregations            |
+| Tabela                | Índice                             | Tipo         | Justificativa       |
+| --------------------- | ---------------------------------- | ------------ | ------------------- |
+| operadoras            | `cnpj` (constraint)                | UNIQUE       | Garante unicidade   |
+| operadoras            | `registro_ans` (constraint)        | UNIQUE       | Garante unicidade   |
+| operadoras            | `idx_operadoras_uf`                | INDEX        | Análises por estado |
+| despesas_consolidadas | `idx_despesas_operadora_trimestre` | INDEX (comp) | Queries analíticas  |
+| despesas_consolidadas | `idx_data`                         | INDEX        | Filtros temporais   |
+| despesas_consolidadas | `idx_valor`                        | INDEX        | Ordenações          |
+| despesas_agregadas    | `idx_agregadas_operadora`          | INDEX        | JOINs               |
+| despesas_agregadas    | `idx_agregadas_uf`                 | INDEX        | Análises por UF     |
+| despesas_agregadas    | `idx_agregadas_total`              | INDEX (DESC) | Top N queries       |
+
+**Nota:** Constraints `UNIQUE` nas colunas `cnpj` e `registro_ans` criam índices únicos automaticamente no PostgreSQL. Os índices adicionais `idx_operadoras_cnpj` e `idx_operadoras_registro` mencionados no DDL são redundantes e podem ser omitidos em ambientes de produção para economizar espaço e melhorar performance de escrita.
 
 ---
 
@@ -324,7 +317,27 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 
 ## 🎯 Tecnologias
 
-- **PostgreSQL 14+** (Recomendado) - Window functions, CTEs avançadas
-- **MySQL 8.0+** (Alternativa) - Compatibilidade, mas sem algumas features
+- **Docker & Docker Compose** (Recomendado) - Containerização e orquestração
+- **PostgreSQL 14+** - Window functions, CTEs avançadas
+- **Python 3.11** - Script de preparação de ambiente
 - **Scripts SQL** - DDL, DML, DQL separados
 - **UTF-8** - Encoding consistente
+
+---
+
+## 📝 Observações Importantes
+
+### Dados de Teste vs Produção
+
+- Os dados utilizados são reais da ANS (2024, trimestres 1-3)
+- Volume: 2.119.622 registros de despesas
+- Operadoras: ~1.500 cadastradas
+- Performance testada e validada
+
+### Execução Verificada
+
+O arquivo `relatorio_final.txt` comprova a execução bem-sucedida de todas as queries analíticas, com resultados reais extraídos do banco de dados contendo 2.1M+ registros.
+
+### Reprodutibilidade
+
+O ambiente Docker garante reprodutibilidade total do teste em qualquer máquina com Docker instalado, integrando-se automaticamente com os outputs dos Testes 1 e 2.

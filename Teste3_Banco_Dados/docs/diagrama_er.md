@@ -104,7 +104,6 @@ CREATE INDEX idx_despesas_valor ON despesas_consolidadas(valor_despesas);
 ```sql
 CREATE INDEX idx_agregadas_operadora ON despesas_agregadas(operadora_id);
 CREATE INDEX idx_agregadas_uf ON despesas_agregadas(uf);
-CREATE INDEX idx_agregadas_total ON despesas_agregadas(total_despesas DESC);
 ```
 
 **Justificativa:**

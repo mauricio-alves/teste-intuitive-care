@@ -15,8 +15,6 @@ CREATE TABLE IF NOT EXISTS operadoras (
 );
 
 -- Índices para performance
-CREATE INDEX idx_operadoras_cnpj ON operadoras(cnpj);
-CREATE INDEX idx_operadoras_registro ON operadoras(registro_ans);
 CREATE INDEX idx_operadoras_uf ON operadoras(uf);
 
 COMMENT ON TABLE operadoras IS 'Cadastro de operadoras de planos de saúde da ANS';
