@@ -17,3 +17,6 @@ data/*
 # Backups
 *.bak
 *~
+
+# Configurações sensíveis
+.env

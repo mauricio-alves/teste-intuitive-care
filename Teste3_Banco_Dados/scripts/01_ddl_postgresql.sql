@@ -89,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_errors_data ON import_errors(data_import);
 
 COMMENT ON TABLE import_errors IS 'Log de erros durante importação de CSVs';
 
--- View: despesas_com_operadora (JOIN pré-calculado)
+-- View: v_despesas_completas (JOIN pré-calculado)
 CREATE OR REPLACE VIEW v_despesas_completas AS
 SELECT 
     dc.id,

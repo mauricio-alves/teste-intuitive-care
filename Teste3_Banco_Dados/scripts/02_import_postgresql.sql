@@ -36,6 +36,8 @@ DROP TABLE temp_operadoras_raw;
 -- 2/3 Importando despesas consolidadas
 \echo ''
 \echo '2/3 Importando despesas consolidadas...'
+TRUNCATE TABLE despesas_consolidadas;
+
 CREATE TEMP TABLE temp_despesas (id_csv TEXT, razao TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
 \COPY temp_despesas FROM '/input_t1/consolidado_despesas.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',');
 
@@ -46,15 +48,18 @@ SELECT
     REGEXP_REPLACE(td.ano, '[^0-9]', '', 'g')::INTEGER,
     COALESCE(NULLIF(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), ''), '0')::DECIMAL(15,2),
     TRIM(td.status)
-FROM temp_despesas td
--- Para evitar duplicidade em reexecuções, recomenda-se rodar o 99_limpeza.sql antes.
+FROM (
+    -- Limpa o ID uma única vez para milhões de linhas
+    SELECT td.*, REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g') AS id_clean 
+    FROM temp_despesas td
+) td
 INNER JOIN operadoras o ON (
     CASE 
-        WHEN LENGTH(REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g')) = 6 THEN o.registro_ans
-        WHEN LENGTH(REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g')) = 14 THEN o.cnpj
+        WHEN LENGTH(td.id_clean) = 6 THEN o.registro_ans
+        WHEN LENGTH(td.id_clean) = 14 THEN o.cnpj
         ELSE NULL
     END
-) = REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g')
+) = td.id_clean
 WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' 
     AND TRIM(td.ano) ~ '^[0-9]{4}$'
     AND UPPER(TRIM(td.status)) <> 'VALOR_NEGATIVO';

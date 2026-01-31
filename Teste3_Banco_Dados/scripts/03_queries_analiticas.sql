@@ -47,7 +47,7 @@ ORDER BY 2 DESC LIMIT 5;
 
 -- Query 3: Acima da Média
 \echo ''
-\echo 'Query 3: Operadoras com despesas acima da média dos totais por operadora em 2 ou 3 Trimestres de 2024'
+\echo 'Query 3: Operadoras com despesas acima da média dos totais por operadora em 2 ou mais Trimestres de 2024'
 WITH totais_op AS (
     SELECT ano, trimestre, operadora_id, SUM(valor_despesas) AS total_op_trim
     FROM despesas_consolidadas WHERE ano = 2024 GROUP BY ano, trimestre, operadora_id

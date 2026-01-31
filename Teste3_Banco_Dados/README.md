@@ -20,6 +20,12 @@ O Teste 3 depende dos artefatos gerados nos testes anteriores. Certifique-se de 
 
 > **Nota sobre o Cadastro**: O arquivo `operadoras_cadastro.csv` é baixado automaticamente pelo script de preparação `pre_import.py` durante a execução do workflow abaixo.
 
+### Configuração de Credenciais
+
+1. **Copie o arquivo de exemplo**: `cp .env.example .env`
+2. **(Opcional) Edite o .env**: Abra o arquivo e insira suas credenciais preferidas para o banco de dados.
+3. **Localização**: Certifique-se de que o arquivo `.env` está localizado na raiz da pasta `Teste3_Banco_Dados`.
+
 ### Opção 1: Docker (Recomendado)
 
 ```bash
@@ -38,19 +44,19 @@ docker rm teste2_transformacao_container
 docker-compose up -d
 
 # Executar a estrutura (DDL)
-docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/01_ddl_postgresql.sql
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/01_ddl_postgresql.sql'
 
 # Importar dados (Consolida T1 e T2)
-docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/02_import_postgresql.sql
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/02_import_postgresql.sql'
 
 # Executar queries analíticas
-docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql --pset pager=off
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/03_queries_analiticas.sql --pset pager=off'
 
 # Gerar relatório final
-docker exec ans_db_container psql -U postgres -d ans_dados -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt
+docker exec ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt'
 
 # Limpar o banco (Opcional)
-docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/99_limpeza.sql
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/99_limpeza.sql'
 ```
 
 ### Opção 2: PostgreSQL (Manual/Local)
@@ -65,20 +71,23 @@ docker exec -it ans_db_container psql -U postgres -d ans_dados -f /scripts/99_li
 | despesas_consolidadas | `idx_despesas_valor` | Ordenações        |
 
 ```bash
+# Antes de executar os comandos abaixo, carregue as variáveis de ambiente na sua sessão de terminal
+export $(grep -v '^#' .env | xargs)
+
 # Criar o banco de dados
-psql -U postgres -c "CREATE DATABASE ans_dados;"
+psql -U ${POSTGRES_USER} -c "CREATE DATABASE ${POSTGRES_DB};"
 
 # Executar a estrutura (DDL)
-psql -U postgres -d ans_dados -f scripts/01_ddl_postgresql.sql
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/01_ddl_postgresql.sql
 
 # Importar dados
-psql -U postgres -d ans_dados -f scripts/02_import_postgresql.sql
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/02_import_postgresql.sql
 
-# Executar queries analíticas
-psql -U postgres -d ans_dados -f scripts/03_queries_analiticas.sql
+# Executar queries analíticas (com pager desativado para evitar interrupção)
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/03_queries_analiticas.sql --pset pager=off
 
 # Gerar relatório final
-psql -U postgres -d ans_dados -f scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o data/relatorio_final.txt
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o data/relatorio_final.txt
 ```
 
 ---
@@ -315,12 +324,12 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 
 | Operação               | Tempo Esperado | Volume         |
 | ---------------------- | -------------- | -------------- |
-| DDL (criação)          | ~1s            | 3 tabelas      |
-| Import consolidadas    | ~30-60s        | 2.1M registros |
+| DDL (criação)          | ~1s            | 4 tabelas      |
+| Import consolidadas    | ~17-18min      | 2.1M registros |
 | Import agregadas       | ~1s            | 781 registros  |
 | Query 1 (crescimento)  | ~2-5s          | 2.1M registros |
 | Query 2 (distribuição) | ~1-3s          | Com índices    |
-| Query 3 (acima média)  | ~3-7s          | CTE otimizado  |
+| Query 3 (acima média)  | ~10s           | CTE otimizado  |
 
 ---
 
