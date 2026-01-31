@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS despesas_consolidadas (
     valor_despesas DECIMAL(15,2) NOT NULL,         
     data_registro DATE,                            
     validacao_cnpj TEXT,                    
-    validacao_valor TEXT,                   
+    status_validacao TEXT,                   
     validacao_razao TEXT,                   
     
     CONSTRAINT fk_operadora FOREIGN KEY (operadora_id) 
@@ -125,7 +125,7 @@ SELECT
     tableowner
 FROM pg_catalog.pg_tables
 WHERE schemaname = 'public'
-  AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas', 'import_errors')
+    AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas', 'import_errors')
 ORDER BY tablename;
 
 -- Listar índices criados
@@ -135,7 +135,7 @@ SELECT
     indexdef
 FROM pg_indexes
 WHERE schemaname = 'public'
-  AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas', 'import_errors')
+    AND tablename IN ('operadoras', 'despesas_consolidadas', 'despesas_agregadas', 'import_errors')
 ORDER BY tablename, indexname;
 
 \echo '✓ Estrutura de banco de dados criada com sucesso!'

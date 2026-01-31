@@ -203,7 +203,7 @@ operadoras (1) ----< (N) despesas_agregadas
 **Log de Erros:**
 
 ```sql
--- Tabela de importação com erros
+-- Tabela de suporte para logs de importação
 CREATE TABLE import_errors (
     id SERIAL PRIMARY KEY,
     tabela_destino VARCHAR(100),

@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 import os
 
 def preparar_ambiente():
@@ -23,6 +23,9 @@ def preparar_ambiente():
             
             if links:
                 url_dl = links[-1]
+                if urlparse(url_dl).netloc != "dadosabertos.ans.gov.br":
+                    print(f"⚠️ Domínio não autorizado: {url_dl}")
+                    continue
                 print(f"📥 Descarregando cadastro: {url_dl}")
                 
                 with requests.get(url_dl, stream=True, timeout=60) as r:

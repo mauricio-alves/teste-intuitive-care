@@ -39,7 +39,7 @@ DROP TABLE temp_operadoras_raw;
 CREATE TEMP TABLE temp_despesas (id_csv TEXT, razao TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
 \COPY temp_despesas FROM '/input_t1/consolidado_despesas.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',');
 
-INSERT INTO despesas_consolidadas (operadora_id, trimestre, ano, valor_despesas, validacao_valor)
+INSERT INTO despesas_consolidadas (operadora_id, trimestre, ano, valor_despesas, status_validacao)
 SELECT 
     o.id,
     REGEXP_REPLACE(td.tri, '[^0-9]', '', 'g')::INTEGER,
@@ -48,8 +48,16 @@ SELECT
     TRIM(td.status)
 FROM temp_despesas td
 -- Para evitar duplicidade em reexecuções, recomenda-se rodar o 99_limpeza.sql antes.
-INNER JOIN operadoras o ON (REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g') = o.registro_ans)
-WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' AND TRIM(td.ano) ~ '^[0-9]{4}$';
+INNER JOIN operadoras o ON (
+    CASE 
+        WHEN LENGTH(REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g')) = 6 THEN o.registro_ans
+        WHEN LENGTH(REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g')) = 14 THEN o.cnpj
+        ELSE NULL
+    END
+) = REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g')
+WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' 
+    AND TRIM(td.ano) ~ '^[0-9]{4}$'
+    AND UPPER(TRIM(td.status)) <> 'VALOR_NEGATIVO';
 
 SELECT COUNT(*) as total_despesas_reais FROM despesas_consolidadas;
 DROP TABLE temp_despesas;
@@ -73,7 +81,7 @@ SELECT
 FROM temp_agregadas ta
 INNER JOIN operadoras o ON (o.razao_social = UPPER(TRIM(ta.razao)))
 WHERE NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '') IS NOT NULL 
-  AND NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '')::INTEGER > 0
+    AND NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '')::INTEGER > 0
 ON CONFLICT DO NOTHING;
 
 SELECT COUNT(*) as total_agregadas FROM despesas_agregadas;
