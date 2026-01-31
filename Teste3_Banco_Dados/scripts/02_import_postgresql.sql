@@ -6,32 +6,47 @@ SET client_encoding = 'UTF8';
 
 -- 1/3 Importando cadastro de operadoras
 \echo '1/3 Importando cadastro de operadoras...'
+TRUNCATE TABLE operadoras CASCADE;
+
 CREATE TEMP TABLE temp_operadoras_raw (linha TEXT);
 \COPY temp_operadoras_raw FROM '/input_t2_temp/operadoras_cadastro.csv' WITH (FORMAT text);
 
--- Limpeza rigorosa: remove qualquer linha que contenha "Registro ANS" (cabeçalhos)
 DELETE FROM temp_operadoras_raw WHERE linha ILIKE '%Registro ANS%';
 
-INSERT INTO operadoras (registro_ans, cnpj, razao_social, modalidade, uf)
+CREATE TEMP TABLE parsed_operadoras_final AS
 SELECT 
-    NULLIF(REGEXP_REPLACE((string_to_array(linha, ';'))[1], '[^0-9]', '', 'g'), ''),
-    NULLIF(REGEXP_REPLACE((string_to_array(linha, ';'))[2], '[^0-9]', '', 'g'), ''),
-    UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[3])), 
-    TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[5]), 
+    NULLIF(REGEXP_REPLACE((string_to_array(linha, ';'))[1], '[^0-9]', '', 'g'), '') AS registro_ans,
+    NULLIF(REGEXP_REPLACE((string_to_array(linha, ';'))[2], '[^0-9]', '', 'g'), '') AS cnpj,
+    UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[3])) AS razao_social, 
+    TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[5]) AS modalidade, 
     CASE 
         WHEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11])) ~ '^[A-Z]{2}$' 
             THEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[11]))
         WHEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[10])) ~ '^[A-Z]{2}$' 
             THEN UPPER(TRIM(BOTH '"' FROM (string_to_array(linha, ';'))[10]))
         ELSE NULL 
-    END
+    END AS uf
 FROM temp_operadoras_raw
 WHERE (string_to_array(linha, ';'))[3] IS NOT NULL 
-AND (string_to_array(linha, ';'))[3] NOT ILIKE '%Razão Social%' 
+AND (string_to_array(linha, ';'))[3] NOT ILIKE '%Razão Social%';
+
+-- 1. Insere/Atualiza por CNPJ
+INSERT INTO operadoras (registro_ans, cnpj, razao_social, modalidade, uf)
+SELECT registro_ans, cnpj, razao_social, modalidade, uf 
+FROM parsed_operadoras_final 
+WHERE cnpj IS NOT NULL
 ON CONFLICT (cnpj) DO UPDATE SET razao_social = EXCLUDED.razao_social;
+
+-- 2. Insere/Atualiza por Registro ANS (casos sem CNPJ)
+INSERT INTO operadoras (registro_ans, cnpj, razao_social, modalidade, uf)
+SELECT registro_ans, cnpj, razao_social, modalidade, uf 
+FROM parsed_operadoras_final 
+WHERE cnpj IS NULL AND registro_ans IS NOT NULL
+ON CONFLICT (registro_ans) DO UPDATE SET razao_social = EXCLUDED.razao_social;
 
 SELECT COUNT(*) as total_operadoras FROM operadoras;
 DROP TABLE temp_operadoras_raw;
+DROP TABLE parsed_operadoras_final;
 
 -- 2/3 Importando despesas consolidadas
 \echo ''
@@ -70,6 +85,8 @@ DROP TABLE temp_despesas;
 -- 3/3 Importando despesas agregadas
 \echo ''
 \echo '3/3 Importando despesas agregadas...'
+TRUNCATE TABLE despesas_agregadas;
+
 CREATE TEMP TABLE temp_agregadas (
     razao TEXT, uf TEXT, total TEXT, media TEXT, desvio TEXT, qtd TEXT
 );
@@ -82,7 +99,7 @@ SELECT
     COALESCE(NULLIF(TRIM(ta.total), ''), '0')::DECIMAL(18,2),
     NULLIF(TRIM(ta.media), '')::DECIMAL(15,2),
     NULLIF(TRIM(ta.desvio), '')::DECIMAL(15,2),
-    COALESCE(NULLIF(TRIM(ta.qtd), ''), '0')::INTEGER
+    COALESCE(NULLIF(REGEXP_REPLACE(ta.qtd, '[^0-9]', '', 'g'), ''), '0')::INTEGER
 FROM temp_agregadas ta
 INNER JOIN operadoras o ON (o.razao_social = UPPER(TRIM(ta.razao)))
 WHERE NULLIF(REGEXP_REPLACE(TRIM(ta.qtd), '[^0-9]', '', 'g'), '') IS NOT NULL 

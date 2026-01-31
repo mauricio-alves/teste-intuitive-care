@@ -14,9 +14,6 @@ CREATE TABLE IF NOT EXISTS operadoras (
     CONSTRAINT chk_uf CHECK (uf ~ '^[A-Z]{2}$')   
 );
 
--- Índices para performance
-CREATE INDEX IF NOT EXISTS idx_operadoras_uf ON operadoras(uf);
-
 COMMENT ON TABLE operadoras IS 'Cadastro de operadoras de planos de saúde da ANS';
 COMMENT ON COLUMN operadoras.registro_ans IS 'Código único de 6 dígitos da ANS';
 COMMENT ON COLUMN operadoras.cnpj IS 'CNPJ sem formatação (apenas números)';
@@ -40,12 +37,6 @@ CREATE TABLE IF NOT EXISTS despesas_consolidadas (
     CONSTRAINT chk_valor_positivo CHECK (valor_despesas >= 0)
 );
 
--- Índices compostos para queries analíticas
-CREATE INDEX IF NOT EXISTS idx_despesas_operadora_trimestre 
-    ON despesas_consolidadas(operadora_id, ano, trimestre);
-CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas_consolidadas(data_registro);
-CREATE INDEX IF NOT EXISTS idx_despesas_valor ON despesas_consolidadas(valor_despesas);
-
 COMMENT ON TABLE despesas_consolidadas IS 'Despesas detalhadas por trimestre (2.1M+ registros)';
 COMMENT ON COLUMN despesas_consolidadas.valor_despesas IS 'DECIMAL para precisão exata em cálculos financeiros';
 COMMENT ON COLUMN despesas_consolidadas.trimestre IS '1=Jan-Mar, 2=Abr-Jun, 3=Jul-Set, 4=Out-Dez';
@@ -68,11 +59,6 @@ CREATE TABLE IF NOT EXISTS despesas_agregadas (
     CONSTRAINT uq_operadora_uf UNIQUE (operadora_id, uf)  
 );
 
--- Índices para análises
-CREATE INDEX IF NOT EXISTS idx_agregadas_operadora ON despesas_agregadas(operadora_id);
-CREATE INDEX IF NOT EXISTS idx_agregadas_uf ON despesas_agregadas(uf);
-CREATE INDEX IF NOT EXISTS idx_agregadas_total ON despesas_agregadas(total_despesas DESC);
-
 COMMENT ON TABLE despesas_agregadas IS 'Despesas pré-agregadas por operadora/UF (~781 registros)';
 COMMENT ON COLUMN despesas_agregadas.total_despesas IS 'DECIMAL(18,2) para somas grandes sem overflow';
 
@@ -84,9 +70,6 @@ CREATE TABLE IF NOT EXISTS import_errors (
     erro TEXT,
     data_import TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX IF NOT EXISTS idx_errors_tabela ON import_errors(tabela_destino);
-CREATE INDEX IF NOT EXISTS idx_errors_data ON import_errors(data_import);
 
 COMMENT ON TABLE import_errors IS 'Log de erros durante importação de CSVs';
 

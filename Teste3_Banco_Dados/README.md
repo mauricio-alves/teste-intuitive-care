@@ -49,26 +49,30 @@ docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_D
 # Importar dados (Consolida T1 e T2)
 docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/02_import_postgresql.sql'
 
+# Criar índices após a carga (Melhora performance de importação)
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/03_indexes_postgresql.sql'
+
 # Executar queries analíticas
-docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/03_queries_analiticas.sql --pset pager=off'
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/04_queries_analiticas.sql --pset pager=off'
 
 # Gerar relatório final
-docker exec ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt'
+docker exec ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/04_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt'
 
 # Limpar o banco (Opcional)
-docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/99_limpeza.sql'
+docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/05_limpeza.sql'
 ```
 
 ### Opção 2: PostgreSQL (Manual/Local)
 
 > **Aviso**: O script `02_import_postgresql.sql` utiliza caminhos absolutos do Docker (ex: `/input_t1`). Para execução local, altere os caminhos no SQL para os diretórios reais de saída do Teste 1 e Teste 2.
 
-### Índices Criados (Nomes Alinhados ao DDL)
+### Índices de Performance (Pós-Carga)
 
-| Tabela                | Índice               | Justificativa     |
-| --------------------- | -------------------- | ----------------- |
-| despesas_consolidadas | `idx_despesas_data`  | Filtros temporais |
-| despesas_consolidadas | `idx_despesas_valor` | Ordenações        |
+| Tabela                | Índice                | Justificativa     |
+| --------------------- | --------------------- | ----------------- |
+| despesas_consolidadas | `idx_despesas_data`   | Filtros temporais |
+| despesas_consolidadas | `idx_despesas_valor`  | Ordenações        |
+| despesas_agregadas    | `idx_agregadas_total` | Ordenações        |
 
 ```bash
 # Antes de executar os comandos abaixo, carregue as variáveis de ambiente na sua sessão de terminal
@@ -83,11 +87,14 @@ psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/01_ddl_postgresql.sql
 # Importar dados
 psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/02_import_postgresql.sql
 
+# Criar índices (Otimização Pós-Carga)
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/03_indexes_postgresql.sql
+
 # Executar queries analíticas (com pager desativado para evitar interrupção)
-psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/03_queries_analiticas.sql --pset pager=off
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/04_queries_analiticas.sql --pset pager=off
 
 # Gerar relatório final
-psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/03_queries_analiticas.sql -P border=2 -P footer=on -o data/relatorio_final.txt
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/04_queries_analiticas.sql -P border=2 -P footer=on -o data/relatorio_final.txt
 ```
 
 ---
