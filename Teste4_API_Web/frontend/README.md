@@ -4,6 +4,10 @@
 
 ## 🚀 Execução Rápida
 
+### Pré-requisito
+
+- Arquivo `.env` é **OBRIGATÓRIO** ao usar Docker
+
 ### Opção 1: Docker (Recomendado)
 
 ```bash
@@ -14,16 +18,10 @@ docker-compose up --build
 docker build -t ans-frontend .
 
 # Executar (modo desenvolvimento com hot reload)
-docker run -p 5173:5173 \
-  -v ${PWD}/src:/app/src:ro \
-  -v ${PWD}/public:/app/public:ro \
-  -e VITE_API_URL=http://localhost:8000 \
-  ans-frontend
+docker run -p 5173:5173 -v ${PWD}/src:/app/src:ro -v ${PWD}/public:/app/public:ro -e VITE_API_URL=http://localhost:8000 ans-frontend
 
 # Executar sem volumes (sem hot reload)
-docker run -p 5173:5173 \
-  -e VITE_API_URL=http://localhost:8000 \
-  ans-frontend
+docker run -p 5173:5173 -e VITE_API_URL=http://localhost:8000 ans-frontend
 
 # Ver logs
 docker-compose logs -f frontend
@@ -35,6 +33,7 @@ docker-compose down
 **Acesso:** http://localhost:5173
 
 **Notas:**
+
 - O frontend conecta à API em `http://localhost:8000`
 - Certifique-se de que o backend está rodando
 - Volumes montados permitem hot reload (alterações refletem automaticamente)
@@ -54,6 +53,7 @@ npm run dev
 **Acesso:** http://localhost:5173
 
 **Build para produção:**
+
 ```bash
 npm run build
 # Arquivos gerados em: dist/
@@ -82,24 +82,18 @@ npm run preview
 
 **Justificativa:**
 
-| Abordagem | Prós | Contras | Decisão |
-|-----------|------|---------|---------|
-| **Servidor** | Escalável, payload pequeno | Latência rede | ✅ Escolhida |
-| Cliente | Instantâneo | Carrega todos dados | ❌ |
-| Híbrido | Melhor UX | Complexo | ❌ |
+| Abordagem    | Prós                       | Contras             | Decisão      |
+| ------------ | -------------------------- | ------------------- | ------------ |
+| **Servidor** | Escalável, payload pequeno | Latência rede       | ✅ Escolhida |
+| Cliente      | Instantâneo                | Carrega todos dados | ❌           |
+| Híbrido      | Melhor UX                  | Complexo            | ❌           |
 
 **Motivos:**
+
 - Dataset de ~1.500 operadoras é grande para carregar tudo
 - Busca SQL (ILIKE) é otimizada com índices
 - Payload reduzido (apenas página atual)
 - Debounce de 500ms mitiga latência
-
-**Implementação:**
-```typescript
-const onBuscaChange = debounce(() => {
-  carregarOperadoras(1, itensPorPagina, termoBusca.value)
-}, 500)
-```
 
 ---
 
@@ -109,25 +103,19 @@ const onBuscaChange = debounce(() => {
 
 **Justificativa:**
 
-| Abordagem | Prós | Contras | Decisão |
-|-----------|------|---------|---------|
-| Props/Events | Simples | Dificulta compartilhamento | ❌ |
-| Pinia/Vuex | Centralizado | Overhead para app pequeno | ❌ |
-| **Composables** | Reutilizável, type-safe | Requer Vue 3 | ✅ Escolhida |
+| Abordagem       | Prós                    | Contras                    | Decisão      |
+| --------------- | ----------------------- | -------------------------- | ------------ |
+| Props/Events    | Simples                 | Dificulta compartilhamento | ❌           |
+| Pinia/Vuex      | Centralizado            | Overhead para app pequeno  | ❌           |
+| **Composables** | Reutilizável, type-safe | Requer Vue 3               | ✅ Escolhida |
 
 **Motivos:**
+
 - App pequeno (~2 páginas)
 - Composables são suficientes para compartilhar lógica
 - Type-safe com TypeScript
 - Sem boilerplate de Pinia/Vuex
 - Reatividade nativa do Vue 3
-
-**Estrutura:**
-```
-composables/
-├── useOperadoras.ts   # Lógica de operadoras
-└── useEstatisticas.ts # Lógica de estatísticas
-```
 
 ---
 
@@ -137,13 +125,14 @@ composables/
 
 **Justificativa:**
 
-| Estratégia | Prós | Contras | Decisão |
-|-----------|------|---------|---------|
-| **Paginação** | Simples, performance ok | - | ✅ Escolhida |
-| Virtual Scroll | Performance máxima | Complexo | ❌ |
-| Infinite Scroll | UX melhor | Memória cresce | ❌ |
+| Estratégia      | Prós                    | Contras        | Decisão      |
+| --------------- | ----------------------- | -------------- | ------------ |
+| **Paginação**   | Simples, performance ok | -              | ✅ Escolhida |
+| Virtual Scroll  | Performance máxima      | Complexo       | ❌           |
+| Infinite Scroll | UX melhor               | Memória cresce | ❌           |
 
 **Motivos:**
+
 - Apenas 10 itens por página (leve)
 - Não justifica virtual scroll
 - UX melhor com paginação tradicional (navegação direta)
@@ -164,6 +153,7 @@ composables/
 ```
 
 **Motivos:**
+
 - Feedback visual claro
 - UX melhor que conteúdo vazio
 - Spinner animado
@@ -179,17 +169,19 @@ composables/
 
 **Trade-off: Mensagens Específicas ✅**
 
-| Abordagem | Prós | Contras | Decisão |
-|-----------|------|---------|---------|
+| Abordagem       | Prós             | Contras             | Decisão      |
+| --------------- | ---------------- | ------------------- | ------------ |
 | **Específicas** | Melhor debugging | Pode expor detalhes | ✅ Escolhida |
-| Genéricas | Seguro | Menos útil | ❌ |
+| Genéricas       | Seguro           | Menos útil          | ❌           |
 
 **Motivos:**
+
 - App interno (não expõe para usuários finais)
 - Facilita debugging
 - Melhor UX para desenvolvedores
 
 **Exemplos de erros:**
+
 - "Erro de conexão. Verifique se o servidor está rodando."
 - "Operadora não encontrada"
 - "Nenhuma despesa encontrada"
@@ -203,55 +195,20 @@ composables/
 ```
 
 **Diferença de erro:**
+
 - Erro = problema técnico
 - Vazio = sem resultados (estado válido)
 
 ---
 
-## 🏗️ Arquitetura
+## 🎯 Tecnologias
 
-```
-frontend/
-├── src/
-│   ├── components/          # Componentes reutilizáveis
-│   │   ├── TabelaOperadoras.vue
-│   │   └── GraficoDespesasUF.vue
-│   ├── composables/         # Lógica reutilizável (hooks)
-│   │   ├── useOperadoras.ts
-│   │   └── useEstatisticas.ts
-│   ├── services/            # Comunicação com API
-│   │   └── api.ts
-│   ├── types/               # Interfaces TypeScript
-│   │   └── index.ts
-│   ├── utils/               # Funções utilitárias
-│   │   └── formatters.ts
-│   ├── views/               # Páginas
-│   │   ├── HomePage.vue
-│   │   └── DetalhesOperadora.vue
-│   ├── router/              # Configuração de rotas
-│   │   └── index.ts
-│   ├── App.vue              # Componente raiz
-│   └── main.ts              # Ponto de entrada
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
-**Padrão:** Separation of Concerns
-
----
-
-## 📦 Dependências
-
-| Pacote | Versão | Uso |
-|--------|--------|-----|
-| vue | 3.4 | Framework |
-| vue-router | 4.2 | Roteamento |
-| axios | 1.6 | HTTP client |
-| chart.js | 4.4 | Gráficos |
-| typescript | 5.3 | Tipagem |
-| vite | 5.0 | Build tool |
+- **Vue.js 3:** Framework progressivo para construção de interfaces e Single Page Applications
+- **TypeScript:** Tipagem estática para maior segurança, autocompletar e escalabilidade do código
+- **Vite:** Ferramenta de build de próxima geração que oferece um servidor de desenvolvimento extremamente rápido
+- **Axios:** Cliente HTTP baseado em promessas para comunicação com a API FastAPI
+- **Chart.js:** Biblioteca versátil para a renderização do gráfico de distribuição de despesas por UF
+- **Vue Router:** Gerenciador oficial de rotas para navegação entre a Home e Detalhes da Operadora
 
 ---
 
@@ -260,46 +217,15 @@ frontend/
 - CSS vanilla (sem frameworks)
 - Componentes scoped
 - Design simples e funcional
-- **Sem responsividade** (conforme requisito)
+- Sem responsividade para esse MVP
 
 ---
 
-## ⚡ Performance
+## ⚡ Performance Esperada
 
-| Métrica | Valor |
-|---------|-------|
-| First Load | ~500ms |
-| Page Navigation | ~100ms |
-| API Calls (cached) | ~50ms |
-| Bundle Size | ~200KB |
-
----
-
-## 🧪 Testando
-
-```bash
-# Garantir que backend está rodando
-# http://localhost:8000
-
-# Iniciar frontend
-npm run dev
-
-# Acessar
-# http://localhost:5173
-```
-
----
-
-## 🔄 Fluxo de Dados
-
-```
-Componente → Composable → Service → API → Backend
-                ↓
-           Estado reativo
-                ↓
-         Renderização Vue
-```
-
----
-
-Desenvolvido para Intuitive Care 🚀
+| Métrica            | Valor  |
+| ------------------ | ------ |
+| First Load         | ~500ms |
+| Page Navigation    | ~100ms |
+| API Calls (cached) | ~50ms  |
+| Bundle Size        | ~200KB |
