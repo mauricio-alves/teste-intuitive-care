@@ -1,0 +1,48 @@
+SET
++--------------------------------------------------------------+----+---------------+----------------+-----------------+
+|                          Operadora                           | UF | Inicial (R$)  |   Final (R$)   | Crescimento (%) |
++--------------------------------------------------------------+----+---------------+----------------+-----------------+
+| UNIMED DO EST. DO RJ FEDERAÇÃO EST. DAS COOPERATIVAS MÉDICAS | RJ | 4953945996.00 | 75534587114.68 |         1424.74 |
+| EVOLUÇÃO ADMINISTRADORA DE BENEFICIOS LTDA                   | MG |    7551137.76 |    74455044.00 |          886.01 |
+| NOVA SAÚDE OPERADORA INTEGRADA DE SAÚDE LTDA                 | RJ |    5280000.00 |    48000032.00 |          809.09 |
+| AURORA SAÚDE LTDA                                            | MG |   17256700.20 |   121786833.84 |          605.74 |
+| INTEGRA ASSISTENCIA MEDICA SA                                | SP |  350547953.84 |  2175896983.76 |          520.71 |
++--------------------------------------------------------------+----+---------------+----------------+-----------------+
+(5 rows)
+
++----+---------------------+----------------+--------------------------+
+| UF | Total Despesas (R$) | Qtd Operadoras | Média por Operadora (R$) |
++----+---------------------+----------------+--------------------------+
+| SP |    6726268039824.09 |            271 |           24820177268.72 |
+| RJ |    3888624485253.53 |             76 |           51166111648.07 |
+| CE |    1503284789153.64 |             15 |          100218985943.58 |
+| MG |    1042259603278.17 |            107 |            9740743955.87 |
+| DF |     705862593607.21 |             21 |           33612504457.49 |
++----+---------------------+----------------+--------------------------+
+(5 rows)
+
++---------------------------------------------------------------------------------------------+---------------------------+
+|                                          Operadora                                          | Trimestres Acima da Média |
++---------------------------------------------------------------------------------------------+---------------------------+
+| AMIL ASSISTÊNCIA MÉDICA INTERNACIONAL S.A.                                                  |                         3 |
+| ASSOCIAÇÃO ADVENTISTA NORTE BRASILEIRA DE PREVENÇÃO E ASSISTÊNCIA A SAÚDE                   |                         3 |
+| ASSOCIAÇÃO BENEFICENTE DOS PROFESSORES PÚBLICOS ATIVOS E INATIVOS DO RIO DE JANEIRO - APPAI |                         3 |
+| ASSOCIAÇÃO DE BENEFICÊNCIA E FILANTROPIA SÃO CRISTOVÃO                                      |                         3 |
+| ASSOCIAÇÃO PETROBRAS DE SAÚDE - APS                                                         |                         3 |
+| BENEFICENCIA CAMILIANA DO SUL                                                               |                         3 |
+| BRADESCO SAÚDE - OPERADORA DE PLANOS  S/A                                                   |                         3 |
+| BRADESCO SAÚDE S.A.                                                                         |                         3 |
+| CAIXA BENEFICENTE DOS FUNCIONARIOS DO BANCO DO ESTADO DE SÃO PAULO                          |                         3 |
+| CAIXA DE ASSISTÊNCIA DOS EMPREGADOS DO BANCO DO ESTADO DO RIO GRANDE DO SUL                 |                         3 |
++---------------------------------------------------------------------------------------------+---------------------------+
+(10 rows)
+
++------+-----+-----+------------------+
+| Ano  | Tri | Ops |    Total (R$)    |
++------+-----+-----+------------------+
+| 2024 |   1 | 756 | 4229335768770.38 |
+| 2024 |   2 | 761 | 5748159394830.02 |
+| 2024 |   3 | 773 | 7309998649994.06 |
++------+-----+-----+------------------+
+(3 rows)
+

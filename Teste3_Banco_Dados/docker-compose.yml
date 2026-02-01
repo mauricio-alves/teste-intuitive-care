@@ -1,0 +1,23 @@
+services:
+  ans-database:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ans_db_container
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:?Variável não definida no .env}
+      - POSTGRES_USER=${POSTGRES_USER:?Variável não definida no .env}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Variável não definida no .env}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./scripts:/scripts
+      - postgres_data:/var/lib/postgresql/data
+      - ./reports:/reports
+      - ../Teste1_ANS_Integration/output:/input_t1:ro
+      - ../Teste2_Transformacao/output:/input_t2_out:ro
+      - ../Teste2_Transformacao/temp:/input_t2_temp:ro
+
+volumes:
+  postgres_data:
