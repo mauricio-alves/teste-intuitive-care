@@ -59,15 +59,6 @@ class EstatisticasResponse(BaseModel):
     top_5_operadoras: List[TopOperadoraItem] 
     periodo_analise: PeriodoAnalise 
 
-class EstatisticasResponse(BaseModel):
-    # Estatísticas gerais do sistema
-    total_despesas: float
-    media_despesas: float
-    total_operadoras: int
-    total_registros: int
-    top_5_operadoras: List[TopOperadoraItem]
-    periodo_analise: PeriodoAnalise
-
 class PaginationMeta(BaseModel):
     # Metadados de paginação
     page: int

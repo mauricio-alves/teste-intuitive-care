@@ -1,5 +1,7 @@
-from fastapi import FastAPI, HTTPException, Query, Path
+from fastapi import FastAPI, HTTPException, Query, Path, BackgroundTasks 
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import logging
 from typing import Optional
 import uvicorn
 
@@ -15,10 +17,28 @@ from app.models import (
 from app.services import OperadoraService, EstatisticasService
 from app.cache import cache_manager
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Eventos de startup/shutdown
+    logger.info("🚀 API iniciada com sucesso!")
+    logger.info("📊 Conectando ao banco de dados...")
+    try:
+        from app.database import get_db_connection
+        conn = get_db_connection()
+        conn.close()
+        logger.info("✅ Banco de dados conectado")
+    except Exception as e:
+        logger.error(f"❌ Erro ao conectar ao banco: {e}")
+    
+    yield
+    logger.info("👋 API desligada")
+
+# Criação da aplicação FastAPI com lifespan
 app = FastAPI(
     title="ANS Operadoras API",
     description="API para consulta de dados de operadoras de planos de saúde",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS
@@ -26,13 +46,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Serviços
 operadora_service = OperadoraService()
 estatisticas_service = EstatisticasService()
+
+# Configuração de Logs básica
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 CACHE_TTL_DEFAULT = 300
 
@@ -66,7 +90,7 @@ async def listar_operadoras(
 
 @app.get("/api/operadoras/{cnpj}", response_model=OperadoraDetailResponse)
 async def detalhe_operadora(
-    cnpj: str = Path(..., regex=r"^\d{14}$", description="CNPJ da operadora (apenas 14 números)")
+    cnpj: str = Path(..., pattern=r"^\d{14}$", description="CNPJ da operadora (apenas 14 números)")
 ):
     # Retorna detalhes de uma operadora específica
     try:
@@ -81,7 +105,7 @@ async def detalhe_operadora(
 
 @app.get("/api/operadoras/{cnpj}/despesas", response_model=DespesasHistoricoResponse)
 async def historico_despesas(
-    cnpj: str = Path(..., regex=r"^\d{14}$", description="CNPJ da operadora (apenas 14 números)")
+    cnpj: str = Path(..., pattern=r"^\d{14}$", description="CNPJ da operadora (apenas 14 números)")
 ):
     # Retorna histórico de despesas de uma operadora
     try:
@@ -131,29 +155,6 @@ async def despesas_por_uf(background_tasks: BackgroundTasks):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail="Erro interno ao processar despesas por UF")
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Eventos de startup/shutdown
-    print("🚀 API iniciada com sucesso!")
-    print("📊 Conectando ao banco de dados...")
-    try:
-        conn = get_db_connection()
-        conn.close()
-        print("✅ Banco de dados conectado")
-    except Exception as e:
-        print(f"❌ Erro ao conectar ao banco: {e}")
-    
-    yield
-    
-    print("👋 API desligada")
-
-app = FastAPI(
-    title="ANS Operadoras API",
-    description="API para consulta de dados de operadoras de planos de saúde",
-    version="1.0.0",
-    lifespan=lifespan
-)
 
 if __name__ == "__main__":
     uvicorn.run(

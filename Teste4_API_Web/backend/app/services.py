@@ -7,7 +7,9 @@ from app.models import (
     OperadoraDetailResponse,
     DespesaItem,
     OperadoraBase,
-    EstatisticasResponse
+    EstatisticasResponse,
+    TopOperadoraItem,
+    PeriodoAnalise
 )
 import math
 
@@ -179,13 +181,13 @@ class EstatisticasService:
             media_despesas=float(stats['media_despesas']),
             total_operadoras=stats['total_operadoras'],
             total_registros=stats['total_registros'],
-            top_5_operadoras=[dict(row) for row in top5],
-            periodo_analise={
-                'ano_inicial': stats['ano_min'],
-                'ano_final': stats['ano_max'],
-                'trimestre_inicial': stats['trimestre_min'],
-                'trimestre_final': stats['trimestre_max']
-            }
+            top_5_operadoras=[TopOperadoraItem(**row) for row in top5],
+            periodo_analise=PeriodoAnalise(
+                ano_inicial=stats['ano_min'],
+                ano_final=stats['ano_max'],
+                trimestre_inicial=stats['trimestre_min'],
+                trimestre_final=stats['trimestre_max']
+            )
         )
     
     def despesas_por_uf(self) -> Dict[str, Any]:
