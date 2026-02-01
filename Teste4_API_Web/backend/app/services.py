@@ -42,9 +42,12 @@ class OperadoraService:
         params = []
         
         if busca:
-            where_clause = " WHERE o.razao_social ILIKE %s OR o.cnpj LIKE %s"
-            search_term = f"%{busca}%"
-            params = [search_term, search_term]
+            if busca.isdigit():
+                where_clause = " WHERE o.cnpj = %s OR o.razao_social ILIKE %s"
+                params = [busca, f"{busca}%"]
+            else:
+                where_clause = " WHERE o.razao_social ILIKE %s"
+                params = [f"{busca}%"]
         
         query = base_query + where_clause + """
             GROUP BY o.id
@@ -81,13 +84,16 @@ class OperadoraService:
         return OperadoraListResponse(data=operadoras, meta=meta)
     
     def buscar_por_cnpj(self, cnpj: str) -> Optional[OperadoraDetailResponse]:
-        # Busca operadora por CNPJ
+        # Busca operadora por CNPJ com agregação protegida
         query = """
             SELECT 
                 o.*,
                 COUNT(dc.id) as total_registros,
                 COALESCE(SUM(dc.valor_despesas), 0) as total_despesas,
-                COALESCE(AVG(dc.valor_despesas), 0) as media_despesas
+                CASE 
+                    WHEN COUNT(dc.id) > 0 THEN SUM(dc.valor_despesas) / COUNT(dc.id)
+                    ELSE 0 
+                END as media_despesas
             FROM operadoras o
             LEFT JOIN despesas_consolidadas dc ON o.id = dc.operadora_id
             WHERE o.cnpj = %s

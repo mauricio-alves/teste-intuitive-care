@@ -17,7 +17,8 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-COPY . .
+COPY ./app /app/app
+COPY main.py /app/
 
 EXPOSE 8000
 

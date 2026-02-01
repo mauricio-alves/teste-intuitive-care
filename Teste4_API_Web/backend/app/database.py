@@ -1,8 +1,9 @@
-from http.client import HTTPException
-from psycopg2.extras import RealDictCursor
 import os
 from typing import Optional
 from psycopg2 import pool
+from psycopg2.pool import PoolError
+from psycopg2.extras import RealDictCursor
+from fastapi import HTTPException
 
 # Pool de conexões global
 db_pool: Optional[pool.SimpleConnectionPool] = None
@@ -14,12 +15,11 @@ def get_db_pool() -> pool.SimpleConnectionPool:
         db_pool = pool.SimpleConnectionPool(
             minconn=1,
             maxconn=20,
-            host=os.getenv("DB_HOST", "localhost"),
-            port=os.getenv("DB_PORT", "5432"),
-            database=os.getenv("DB_NAME", "ans_dados"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", "postgres"),
-            cursor_factory=RealDictCursor
+            host=os.environ["DB_HOST"],
+            port=int(os.environ["DB_PORT"]),
+            database=os.environ["DB_NAME"],
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"]
         )
     return db_pool
 
@@ -36,7 +36,7 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one: bool = 
     # Executa query e retorna resultados
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(query, params or ())
             return cursor.fetchone() if fetch_one else cursor.fetchall()
     except Exception:
@@ -49,7 +49,7 @@ def execute_query_with_count(query: str, count_query: str, params: Optional[tupl
     # Executa query e retorna (resultados, count total)
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(query, params or ())
             results = cursor.fetchall()
             cursor.execute(count_query, count_params if count_params is not None else (params or ()))
@@ -60,3 +60,10 @@ def execute_query_with_count(query: str, count_query: str, params: Optional[tupl
         raise e
     finally:
         release_db_connection(conn)
+
+def close_db_pool():
+    # Encerra todas as conexões do pool explicitamente
+    global db_pool
+    if db_pool is not None:
+        db_pool.closeall()
+        db_pool = None
