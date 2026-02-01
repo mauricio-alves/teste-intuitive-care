@@ -15,7 +15,7 @@ export function useUI() {
 
   const clearError = () => {
     if (errorTimeout) {
-      clearTimeout(errorTimeout);
+      window.clearTimeout(errorTimeout);
       errorTimeout = null;
     }
     error.message = null;

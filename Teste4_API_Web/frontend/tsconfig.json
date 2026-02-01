@@ -29,7 +29,7 @@
     },
 
     /* Tipos Necessários para Vite e Vue */
-    "types": ["vite/client", "node"]
+    "types": ["vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]

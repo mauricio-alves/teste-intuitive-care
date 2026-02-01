@@ -1,7 +1,8 @@
 <template>
   <div class="tabela-operadoras">
     <div class="busca-container">
-      <input v-model="termoBusca" @input="onBuscaChange" type="text" placeholder="Buscar por razão social ou CNPJ..." class="busca-input" />
+      <label for="busca-operadoras" class="sr-only">Buscar operadoras:</label>
+      <input id="busca-operadoras" v-model="termoBusca" @input="onBuscaChange" type="text" placeholder="Buscar por razão social ou CNPJ..." class="busca-input" aria-label="Buscar operadoras por razão social ou CNPJ" />
     </div>
 
     <div v-if="loading" class="loading">
@@ -93,6 +94,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .tabela-operadoras {
   width: 100%;
 }

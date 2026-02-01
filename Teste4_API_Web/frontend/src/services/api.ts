@@ -3,7 +3,7 @@ import type { Operadora, OperadoraDetail, DespesasHistorico, Estatisticas, Despe
 import { useUI } from "@/composables/useUI";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: "",
   timeout: 10000,
 });
 
