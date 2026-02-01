@@ -2,37 +2,43 @@ import axios from "axios";
 import type { Operadora, OperadoraDetail, DespesasHistorico, Estatisticas, DespesasPorUF, PaginatedResponse } from "@/types";
 import { useUI } from "@/composables/useUI";
 
-// Configuração da instância do Axios
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 const { setLoading, setError } = useUI();
 
-// Interceptors para gerenciar loading e erros globalmente
+let pendingRequests = 0;
+
+const handleRequest = () => {
+  pendingRequests++;
+  if (pendingRequests === 1) setLoading(true);
+};
+
+const handleResponse = () => {
+  pendingRequests = Math.max(0, pendingRequests - 1);
+  if (pendingRequests === 0) setLoading(false);
+};
+
 api.interceptors.request.use(
   (config) => {
-    setLoading(true);
+    handleRequest();
     return config;
   },
   (error) => {
-    setLoading(false);
+    handleResponse();
     return Promise.reject(error);
   },
 );
 
 api.interceptors.response.use(
   (response) => {
-    setLoading(false);
+    handleResponse();
     return response;
   },
   (error) => {
-    setLoading(false);
-
+    handleResponse();
     let message = "Ocorreu um erro inesperado. Tente novamente mais tarde.";
 
     if (error.response) {
@@ -43,6 +49,7 @@ api.interceptors.response.use(
     }
 
     setError(message);
+    error.message = message;
     return Promise.reject(error);
   },
 );

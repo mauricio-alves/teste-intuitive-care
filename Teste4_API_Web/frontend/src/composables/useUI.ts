@@ -6,19 +6,31 @@ const error = reactive<{ message: string | null; type: "error" | "warning" | nul
   type: null,
 });
 
+let errorTimeout: number | null = null;
+
 export function useUI() {
   const setLoading = (value: boolean) => {
     loading.value = value;
   };
 
+  const clearError = () => {
+    if (errorTimeout) {
+      clearTimeout(errorTimeout);
+      errorTimeout = null;
+    }
+    error.message = null;
+    error.type = null;
+  };
+
   const setError = (message: string | null, type: "error" | "warning" | null = "error") => {
-    error.message = message;
-    error.type = type;
+    clearError();
 
     if (message) {
-      setTimeout(() => {
-        error.message = null;
-        error.type = null;
+      error.message = message;
+      error.type = type;
+
+      errorTimeout = window.setTimeout(() => {
+        clearError();
       }, 5000);
     }
   };
@@ -28,5 +40,6 @@ export function useUI() {
     error,
     setLoading,
     setError,
+    clearError,
   };
 }

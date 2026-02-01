@@ -8,7 +8,7 @@ export function formatCurrency(value: number): string {
   }).format(value);
 }
 
-// Formata CPF
+// Formata CNPJ (14 dígitos)
 export function formatCNPJ(cnpj: string): string {
   if (!cnpj) return "";
 

@@ -5,7 +5,7 @@ export interface Estatisticas {
   total_registros: number;
   top_5_operadoras: Array<{
     razao_social: string;
-    uf: string;
+    uf: string | null;
     total_despesas: number;
   }>;
   periodo_analise: {

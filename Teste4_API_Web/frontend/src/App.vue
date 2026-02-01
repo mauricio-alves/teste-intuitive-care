@@ -5,7 +5,7 @@
     <transition name="fade">
       <div v-if="error.message" :class="['global-alert', error.type]">
         {{ error.message }}
-        <button @click="error.message = null">&times;</button>
+        <button @click="clearError">&times;</button>
       </div>
     </transition>
 
@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { useUI } from "@/composables/useUI";
-const { loading, error } = useUI();
+const { loading, error, clearError } = useUI();
 </script>
 
 <style>

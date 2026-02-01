@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { Chart, registerables } from "chart.js";
 import { apiService } from "@/services/api";
 import { formatLargeNumber } from "@/utils/formatters";
@@ -22,12 +22,16 @@ const chartCanvas = ref<HTMLCanvasElement | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
+let chartInstance: Chart | null = null;
+
 onMounted(async () => {
   try {
     const data = await apiService.buscarDespesasPorUF();
+
+    await nextTick();
     if (!chartCanvas.value) return;
 
-    new Chart(chartCanvas.value, {
+    chartInstance = new Chart(chartCanvas.value, {
       type: "bar",
       data: {
         labels: data.ufs,
@@ -65,13 +69,18 @@ onMounted(async () => {
         },
       },
     });
-
-    loading.value = false;
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Erro ao carregar gráfico";
     loading.value = false;
   } finally {
     loading.value = false;
+  }
+});
+
+onBeforeUnmount(() => {
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
   }
 });
 </script>
