@@ -1,0 +1,30 @@
+# Git
+
+.git
+.gitignore
+
+# Python
+
+\*_/**pycache**/
+_.py[cod]
+\*$py.class
+.pytest_cache/
+.venv/
+venv/
+
+# Environment and secrets
+
+.env
+\*.local
+
+# Documentation and IDEs
+
+.vscode/
+.idea/
+README.md
+ANS_Operadoras_API.postman_collection.json
+
+# Docker
+
+Dockerfile
+docker-compose.yml
