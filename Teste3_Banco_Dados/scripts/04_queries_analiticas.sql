@@ -35,14 +35,12 @@ ORDER BY 5 DESC LIMIT 5;
 \echo ''
 \echo 'Query 2: Distribuição de despesas por UF (Top 5 por Volume)'
 SELECT 
-    o.uf as "UF",
-    ROUND(SUM(dc.valor_despesas)::NUMERIC, 2) as "Total Despesas (R$)",
-    COUNT(DISTINCT dc.operadora_id) as "Qtd Operadoras",
-    ROUND((SUM(dc.valor_despesas) / COUNT(DISTINCT dc.operadora_id))::NUMERIC, 2) as "Média por Operadora (R$)"
-FROM despesas_consolidadas dc
-JOIN operadoras o ON dc.operadora_id = o.id
-WHERE o.uf ~ '^[A-Z]{2}$'
-GROUP BY o.uf
+    da.uf as "UF",
+    ROUND(SUM(da.total_despesas)::NUMERIC, 2) as "Total Despesas (R$)",
+    COUNT(DISTINCT da.operadora_id) as "Qtd Operadoras",
+    ROUND((SUM(da.total_despesas) / COUNT(DISTINCT da.operadora_id))::NUMERIC, 2) as "Média por Operadora (R$)"
+FROM despesas_agregadas da
+GROUP BY da.uf
 ORDER BY 2 DESC LIMIT 5;
 
 -- Query 3: Acima da Média
@@ -68,6 +66,7 @@ status_op AS (
 SELECT razao_social as "Operadora", SUM(acima) as "Trimestres Acima da Média"
 FROM status_op 
 GROUP BY operadora_id, razao_social
+HAVING SUM(acima) >= 2
 ORDER BY 2 DESC, 1 ASC
 LIMIT 10;
 

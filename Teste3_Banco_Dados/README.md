@@ -12,13 +12,13 @@ Estruturar banco de dados relacional para armazenar dados da ANS, implementar im
 
 ### Pré-requisitos
 
-O Teste 3 depende dos artefatos gerados nos testes anteriores. Certifique-se de que os seguintes arquivos estão presentes em suas respectivas pastas de saída antes de iniciar:
+O Teste 3 atua como o integrador final, dependendo dos artefatos gerados nos testes anteriores. Certifique-se de que os seguintes arquivos estão presentes em seus respectivos diretórios antes de iniciar:
 
-- **Teste 1**: `Teste1_ANS_Integration/output/consolidado_despesas.csv`
-- **Teste 2**: `Teste2_Transformacao/output/despesas_agregadas.csv`
-- **Teste 2**: `operadoras_cadastro.csv`
+- **Do Teste 1**: `Teste1_ANS_Integration/output/consolidado_despesas.csv` (Mapeado via volume como `/input_t1`)
+- **Do Teste 2**: `Teste2_Transformacao/output/despesas_agregadas.csv` (Mapeado via volume como `/input_t2_out`)
+- **Cadastro ANS**: `Teste3_Banco_Dados/temp/operadoras_cadastro.csv` (Baixado automaticamente pelo `pre_import.py`)
 
-> **Nota sobre o Cadastro**: O arquivo `operadoras_cadastro.csv` é baixado automaticamente pelo script de preparação `pre_import.py` durante a execução do workflow abaixo.
+> **Nota sobre o Cadastro**: O arquivo de cadastro das operadoras é obtido diretamente dos Dados Abertos da ANS através do script `pre_import.py`. Este arquivo é armazenado temporariamente na pasta `temp/` e mapeado para o banco de dados como `/input_t2_temp` para garantir que a importação utilize a versão mais recente disponível.
 
 ### Configuração de Credenciais
 
@@ -56,23 +56,13 @@ docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_D
 docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/04_queries_analiticas.sql --pset pager=off'
 
 # Gerar relatório final
-docker exec ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/04_queries_analiticas.sql -P border=2 -P footer=on -o /var/lib/postgresql/data/relatorio_final.txt'
+docker exec ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/04_queries_analiticas.sql -P border=2 -P footer=on -o /reports/relatorio_final.txt'
 
 # Limpar o banco (Opcional)
 docker exec -it ans_db_container sh -c 'psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /scripts/05_limpeza.sql'
 ```
 
 ### Opção 2: PostgreSQL (Manual/Local)
-
-> **Aviso**: O script `02_import_postgresql.sql` utiliza caminhos absolutos do Docker (ex: `/input_t1`). Para execução local, altere os caminhos no SQL para os diretórios reais de saída do Teste 1 e Teste 2.
-
-### Índices de Performance (Pós-Carga)
-
-| Tabela                | Índice                | Justificativa     |
-| --------------------- | --------------------- | ----------------- |
-| despesas_consolidadas | `idx_despesas_data`   | Filtros temporais |
-| despesas_consolidadas | `idx_despesas_valor`  | Ordenações        |
-| despesas_agregadas    | `idx_agregadas_total` | Ordenações        |
 
 ```bash
 # Antes de executar os comandos abaixo, carregue as variáveis de ambiente na sua sessão de terminal
@@ -94,19 +84,25 @@ psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/03_indexes_postgresql.sql
 psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/04_queries_analiticas.sql --pset pager=off
 
 # Gerar relatório final
-psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/04_queries_analiticas.sql -P border=2 -P footer=on -o data/relatorio_final.txt
+psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f scripts/04_queries_analiticas.sql -P border=2 -P footer=on -o reports/relatorio_final.txt
 ```
 
 ---
 
 ## 🗂️ Arquivos Gerados
 
-Após a execução completa do workflow, a estrutura da pasta `Teste3_Banco_Dados/data/` será populada e organizada da seguinte forma:
+Após a execução completa do workflow, as pastas de saída serão organizadas da seguinte forma para garantir o isolamento entre dados do sistema e resultados analíticos:
+
+### 📁 `Teste3_Banco_Dados/data/` (Persistência)
 
 - **`pgdata/`**: Diretório criado automaticamente pelo container PostgreSQL para armazenar os volumes binários e a persistência do banco de dados (2.1M+ registros).
   - _Nota: Este diretório está listado no `.gitignore` para evitar o versionamento de arquivos binários e conflitos de permissão root/user._
-- **`relatorio_final.txt`**: Documento gerado pelo script de queries analíticas, contendo os resultados das queries.
-- **`.gitkeep`**: Arquivo de controle utilizado para preservar a existência da pasta `data/` no repositório remoto, garantindo que o ambiente Docker encontre o caminho mapeado para o volume.
+- **`.gitkeep`**: Arquivo de controle para preservar a pasta no repositório.
+
+### 📁 `Teste3_Banco_Dados/reports/` (Resultados)
+
+- **`relatorio_final.txt`**: Documento gerado pelo script de queries analíticas (`04_queries_analiticas.sql`). Contém os insights processados sobre as operadoras e despesas de 2024.
+  - _Dica: Este arquivo é mapeado via Bind Mount, facilitando o acesso direto pelo host (Windows/Linux) sem necessidade de entrar no container._
 
 ---
 
@@ -260,22 +256,23 @@ CREATE TABLE import_errors (
 
 **Desafio Adicional:** Média por operadora em cada UF
 
-**Abordagem:** Agregação direta + GROUP BY
+**Abordagem:** Consumo de Tabela Agregada (Data Mart) integrada do Teste 2
 
 **Trade-off:**
 
-| Método               | Legibilidade | Performance | Escolha |
-| -------------------- | ------------ | ----------- | ------- |
-| **Agregação direta** | Alta         | Ótima       | ✅      |
-| Window Functions     | Média        | Boa         | ⚠️      |
-| Subqueries           | Baixa        | Ruim        | ❌      |
+| Método                                          | Legibilidade | Performance | Escolha |
+| ----------------------------------------------- | ------------ | ----------- | ------- |
+| **Uso de Tabela de Agregados (Materialização)** | Alta         | Máxima      | ✅      |
+| Agregação direta                                | Alta         | Ótima       | ⚠️      |
+| Window Functions                                | Média        | Boa         | ⚠️      |
+| Subqueries                                      | Baixa        | Ruim        | ❌      |
 
 **Justificativa:**
 
-- ✅ Agregação simples: `SUM / COUNT(DISTINCT operadora_id)`
-- ✅ 1 scan da tabela com GROUP BY
-- ✅ Código conciso e fácil de manter
-- ✅ Performance ótima com índice em UF
+- ✅ **Otimização de I/O**: Em vez de realizar um scan em 2 milhões de registros, a query lê apenas ~760 linhas pré-agregadas.
+- ✅ **Separação de Preocupações**: O cálculo pesado de agregação foi realizado na fase de transformação (ETL/Teste 2), deixando o banco apenas com a tarefa de exibição rápida.
+- ✅ **Performance Sub-segundo**: Resultados obtidos em menos de 0.1s, ideal para dashboards e relatórios de BI.
+- ✅ **Consistência Cross-Test**: Demonstra a integração funcional entre os artefatos de saída do Teste 2 e a estrutura de dados do Teste 3.
 
 ---
 
@@ -329,15 +326,15 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 
 ## ⚡ Performance Esperada
 
-| Operação               | Tempo Esperado | Volume                       |
-| ---------------------- | -------------- | ---------------------------- |
-| DDL (criação)          | ~1.5s          | 4 tabelas                    |
-| Import consolidadas    | ~21-22min      | 2.1M registros               |
-| Import agregadas       | ~1s            | 781 registros                |
-| Criação de Índices     | ~1.6s          | 9 índices                    |
-| Query 1 (crescimento)  | ~2-5s          | 2.1M registros               |
-| Query 2 (distribuição) | ~1-3s          | 2.1M registros (com índices) |
-| Query 3 (acima média)  | ~10s           | CTE otimizado                |
+| Operação               | Tempo Esperado | Volume                    |
+| ---------------------- | -------------- | ------------------------- |
+| DDL (criação)          | ~1s            | 4 tabelas                 |
+| Import consolidadas    | ~13-14min      | 2.05M registros           |
+| Import agregadas       | ~1s            | 768 registros             |
+| Criação de Índices     | ~3.6s          | 9 índices                 |
+| Query 1 (crescimento)  | <1s            | 2.05M registros           |
+| Query 2 (distribuição) | <0.1s          | 768 registros (agregados) |
+| Query 3 (acima média)  | ~1-2s          | CTE otimizado             |
 
 > **Nota**: Testes realizados em ambiente Docker utilizando volumes mapeados. A performance das queries pode variar levemente dependendo das especificações de hardware (CPU/SSD) disponíveis para o container..
 
@@ -355,17 +352,19 @@ O modelo relacional detalhado (entidade-relacionamento) descrevendo as chaves pr
 
 ## 📝 Observações Importantes
 
-### Dados de Teste vs Produção
+### Dados de Teste e Saneamento
 
-- Os dados utilizados são reais da ANS (2024, trimestres 1-3)
-- Volume: 2.119.622 registros de despesas
-- Operadoras: ~1.500 cadastradas
-- Performance testada e validada
+- **Dados Reais**: Utilização de dados oficiais da ANS (2024, trimestres 1-3).
+- **Volume Processado**: 2.119.622 registros lidos, resultando em 2.058.994 registros importados após saneamento de dados (remoção de valores negativos e inconsistências).
+- **Operadoras**: 1.110 operadoras ativas cadastradas com sucesso via ON CONFLICT otimizado.
+- **Performance**: Pipeline validado para processar milhões de linhas em menos de 15 minutos em ambiente Docker.
 
-### Execução Verificada
+### Execução e Artefatos
 
-O arquivo `relatorio_final.txt` comprova a execução bem-sucedida de todas as queries analíticas, com resultados reais extraídos do banco de dados contendo 2.1M+ registros.
+- **Relatório Analítico**: O arquivo `reports/relatorio_final.txt` comprova a execução bem-sucedida de todas as queries, com resultados extraídos diretamente do banco de dados.
+- **Persistência Isolada**: O uso de volumes nomeados garante que o estado do banco (`pgdata`) seja preservado de forma independente dos artefatos de saída.
 
-### Reprodutibilidade
+### Reprodutibilidade e Integração
 
-O ambiente Docker garante reprodutibilidade total do teste em qualquer máquina com Docker instalado, integrando-se automaticamente com os outputs dos Testes 1 e 2.
+- **Workflow Integrado**: O ambiente Docker integra-se automaticamente com os outputs dos Testes 1 e 2 via Bind Mounts em modo somente leitura (:ro).
+- **Ambiente Controlado**: O uso de limites de download (`MAX_BYTES`) no script de preparação garante a resiliência do ambiente em diferentes conexões.

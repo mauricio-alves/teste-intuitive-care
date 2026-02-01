@@ -5,7 +5,6 @@ data/*.zip
 # Mantém estrutura, mas ignora conteúdo
 data/*
 !data/.gitkeep
-!data/relatorio_final.txt
 
 # Logs de importação
 *.log

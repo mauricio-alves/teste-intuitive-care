@@ -24,6 +24,7 @@ def preparar_ambiente():
             links = [urljoin(url_base, a['href']) for a in soup.find_all('a', href=True) if a['href'].endswith('.csv')]
             
             if links:
+                links.sort()
                 url_dl = links[-1]
                 if urlparse(url_dl).netloc != "dadosabertos.ans.gov.br":
                     print(f"⚠️ Domínio não autorizado: {url_dl}")

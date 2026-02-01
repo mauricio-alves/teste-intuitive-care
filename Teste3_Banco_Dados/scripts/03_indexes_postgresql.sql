@@ -8,6 +8,9 @@ CREATE INDEX IF NOT EXISTS idx_despesas_operadora_trimestre
     ON despesas_consolidadas(operadora_id, ano, trimestre);
 CREATE INDEX IF NOT EXISTS idx_despesas_valor ON despesas_consolidadas(valor_despesas);
 
+-- Índice de data de registro, caso seja necessário para auditorias futuras
+CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas_consolidadas(data_registro);
+
 -- Índices Despesas Agregadas (Crítico para a Query 2)
 CREATE INDEX IF NOT EXISTS idx_agregadas_operadora ON despesas_agregadas(operadora_id);
 CREATE INDEX IF NOT EXISTS idx_agregadas_uf ON despesas_agregadas(uf);

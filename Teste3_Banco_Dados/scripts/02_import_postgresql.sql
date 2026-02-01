@@ -35,14 +35,22 @@ INSERT INTO operadoras (registro_ans, cnpj, razao_social, modalidade, uf)
 SELECT registro_ans, cnpj, razao_social, modalidade, uf 
 FROM parsed_operadoras_final 
 WHERE cnpj IS NOT NULL
-ON CONFLICT (cnpj) DO UPDATE SET razao_social = EXCLUDED.razao_social;
+ON CONFLICT (cnpj) DO UPDATE SET 
+    razao_social = EXCLUDED.razao_social,
+    modalidade   = COALESCE(EXCLUDED.modalidade, operadoras.modalidade),
+    uf           = COALESCE(EXCLUDED.uf, operadoras.uf),
+    registro_ans = COALESCE(EXCLUDED.registro_ans, operadoras.registro_ans);
 
 -- 2. Insere/Atualiza por Registro ANS (casos sem CNPJ)
 INSERT INTO operadoras (registro_ans, cnpj, razao_social, modalidade, uf)
 SELECT registro_ans, cnpj, razao_social, modalidade, uf 
 FROM parsed_operadoras_final 
 WHERE cnpj IS NULL AND registro_ans IS NOT NULL
-ON CONFLICT (registro_ans) DO UPDATE SET razao_social = EXCLUDED.razao_social;
+ON CONFLICT (registro_ans) DO UPDATE SET 
+    razao_social = EXCLUDED.razao_social,
+    modalidade   = COALESCE(EXCLUDED.modalidade, operadoras.modalidade),
+    uf           = COALESCE(EXCLUDED.uf, operadoras.uf),
+    cnpj         = COALESCE(EXCLUDED.cnpj, operadoras.cnpj);
 
 SELECT COUNT(*) as total_operadoras FROM operadoras;
 DROP TABLE temp_operadoras_raw;
@@ -56,28 +64,36 @@ TRUNCATE TABLE despesas_consolidadas;
 CREATE TEMP TABLE temp_despesas (id_csv TEXT, razao TEXT, tri TEXT, ano TEXT, valor TEXT, status TEXT);
 \COPY temp_despesas FROM '/input_t1/consolidado_despesas.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',');
 
-INSERT INTO despesas_consolidadas (operadora_id, trimestre, ano, valor_despesas, status_validacao)
+INSERT INTO despesas_consolidadas (operadora_id, trimestre, ano, data_registro, valor_despesas, status_validacao)
 SELECT 
-    o.id,
-    REGEXP_REPLACE(td.tri, '[^0-9]', '', 'g')::INTEGER,
-    REGEXP_REPLACE(td.ano, '[^0-9]', '', 'g')::INTEGER,
-    COALESCE(NULLIF(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), ''), '0')::DECIMAL(15,2),
-    TRIM(td.status)
+    sub.op_id,
+    sub.tri_n, 
+    sub.ano_n, 
+    make_date(sub.ano_n, (sub.tri_n - 1) * 3 + 1, 1),
+    sub.valor_n, 
+    sub.status_n 
 FROM (
-    -- Limpa o ID uma única vez para milhões de linhas
-    SELECT td.*, REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g') AS id_clean 
-    FROM temp_despesas td
-) td
-INNER JOIN operadoras o ON (
-    CASE 
-        WHEN LENGTH(td.id_clean) = 6 THEN o.registro_ans
-        WHEN LENGTH(td.id_clean) = 14 THEN o.cnpj
-        ELSE NULL
-    END
-) = td.id_clean
-WHERE TRIM(td.tri) ~ '^[0]?[1-4]$' 
-    AND TRIM(td.ano) ~ '^[0-9]{4}$'
-    AND UPPER(TRIM(td.status)) <> 'VALOR_NEGATIVO';
+    -- Busca por Registro ANS
+    SELECT o.id as op_id,
+        REGEXP_REPLACE(td.tri, '[^0-9]', '', 'g')::INTEGER as tri_n,
+        REGEXP_REPLACE(td.ano, '[^0-9]', '', 'g')::INTEGER as ano_n,
+        COALESCE(NULLIF(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), ''), '0')::DECIMAL(15,2) as valor_n,
+        TRIM(td.status) as status_n
+    FROM (SELECT td.*, REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g') AS id_clean FROM temp_despesas td) td
+    INNER JOIN operadoras o ON o.registro_ans = td.id_clean
+    WHERE LENGTH(td.id_clean) = 6
+    UNION ALL
+    -- Busca por CNPJ
+    SELECT o.id, 
+        REGEXP_REPLACE(td.tri, '[^0-9]', '', 'g')::INTEGER,
+        REGEXP_REPLACE(td.ano, '[^0-9]', '', 'g')::INTEGER,
+        COALESCE(NULLIF(REGEXP_REPLACE(td.valor, '[^0-9.]', '', 'g'), ''), '0')::DECIMAL(15,2),
+        TRIM(td.status)
+    FROM (SELECT td.*, REGEXP_REPLACE(td.id_csv, '[^0-9]', '', 'g') AS id_clean FROM temp_despesas td) td
+    INNER JOIN operadoras o ON o.cnpj = td.id_clean
+    WHERE LENGTH(td.id_clean) = 14
+) as sub
+WHERE sub.tri_n BETWEEN 1 AND 4 AND UPPER(sub.status_n) <> 'VALOR_NEGATIVO';
 
 SELECT COUNT(*) as total_despesas_reais FROM despesas_consolidadas;
 DROP TABLE temp_despesas;
