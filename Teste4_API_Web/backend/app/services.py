@@ -60,7 +60,8 @@ class OperadoraService:
         results, total = execute_query_with_count(
             query,
             count_query,
-            tuple(query_params) if query_params else None
+            params=tuple(query_params), 
+            count_params=tuple(params) if params else None 
         )
         
         operadoras = [OperadoraListItem(**row) for row in results]
@@ -120,7 +121,7 @@ class OperadoraService:
                 ano,
                 trimestre,
                 SUM(valor_despesas) as valor_despesas,
-                CONCAT(ano, '-T', trimestre) as periodo
+                ano || '-T' || trimestre as periodo
             FROM despesas_consolidadas
             WHERE operadora_id = %s
             GROUP BY ano, trimestre

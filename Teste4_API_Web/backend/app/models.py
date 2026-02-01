@@ -37,14 +37,36 @@ class DespesasHistoricoResponse(BaseModel):
     soma_total: float
     media: float
 
+class TopOperadoraItem(BaseModel):
+    # Item das top 5 operadoras por despesas
+    razao_social: str
+    uf: Optional[str]
+    total_despesas: float
+
+class PeriodoAnalise(BaseModel):
+    # Detalhes do período analisado
+    ano_inicial: int
+    ano_final: int
+    trimestre_inicial: int
+    trimestre_final: int
+
+class EstatisticasResponse(BaseModel):
+    # Estatísticas gerais do sistema atualizado
+    total_despesas: float
+    media_despesas: float
+    total_operadoras: int
+    total_registros: int
+    top_5_operadoras: List[TopOperadoraItem] 
+    periodo_analise: PeriodoAnalise 
+
 class EstatisticasResponse(BaseModel):
     # Estatísticas gerais do sistema
     total_despesas: float
     media_despesas: float
     total_operadoras: int
     total_registros: int
-    top_5_operadoras: List[dict]
-    periodo_analise: dict
+    top_5_operadoras: List[TopOperadoraItem]
+    periodo_analise: PeriodoAnalise
 
 class PaginationMeta(BaseModel):
     # Metadados de paginação
