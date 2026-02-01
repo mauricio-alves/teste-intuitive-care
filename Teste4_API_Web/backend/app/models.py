@@ -55,7 +55,7 @@ class PaginationMeta(BaseModel):
     has_next: bool
     has_prev: bool
 
-class PaginatedResponse(BaseModel):
+class OperadoraListResponse(BaseModel):
     # Resposta paginada genérica
     data: List[OperadoraListItem]
     meta: PaginationMeta

@@ -4,6 +4,10 @@
 
 ## 🚀 Execução Rápida
 
+### Pré-requisito
+
+O Teste 4 depende que o banco de dados do teste 3 esteja rodando.
+
 ### Opção 1: Docker (Recomendado)
 
 ```bash
@@ -11,13 +15,13 @@
 docker-compose up --build
 
 # Ou build manual
-docker build -t ans-api-backend .
+docker build -t backend-api .
 
 # Executar conectando ao PostgreSQL do host (Teste 3)
-docker run -p 8000:8000 --add-host=host.docker.internal:host-gateway -e DB_HOST=host.docker.internal -e DB_PORT=5432 -e DB_NAME=ans_dados -e DB_USER=postgres -e DB_PASSWORD=postgres ans-api-backend
+docker run -p 8000:8000 --add-host=host.docker.internal:host-gateway -e DB_HOST=host.docker.internal -e DB_PORT=5432 -e DB_NAME=ans_dados -e DB_USER=postgres -e DB_PASSWORD=postgres backend-api
 
 # Executar com hot reload (desenvolvimento)
-docker run -p 8000:8000 --add-host=host.docker.internal:host-gateway -v ${PWD}/app:/app/app:ro -e DB_HOST=host.docker.interna -e DB_PORT=5432 -e DB_NAME=ans_dados -e DB_USER=postgres -e DB_PASSWORD=postgres ans-api-backend
+docker run -p 8000:8000 --add-host=host.docker.internal:host-gateway -v ${PWD}/app:/app/app:ro -e DB_HOST=host.docker.internal -e DB_PORT=5432 -e DB_NAME=ans_dados -e DB_USER=postgres -e DB_PASSWORD=postgres backend-api
 
 # Ver logs
 docker-compose logs -f api

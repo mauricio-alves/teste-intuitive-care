@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any
 from app.database import execute_query, execute_query_with_count
 from app.models import (
-    PaginatedResponse,
+    OperadoraListResponse,
     PaginationMeta,
     OperadoraListItem,
     OperadoraDetailResponse,
@@ -19,7 +19,7 @@ class OperadoraService:
         page: int = 1,
         limit: int = 10,
         busca: Optional[str] = None
-    ) -> PaginatedResponse:
+    ) -> OperadoraListResponse:
         # Lista operadoras com paginação offset-based    
         offset = (page - 1) * limit
         
@@ -75,7 +75,7 @@ class OperadoraService:
             has_prev=page > 1
         )
         
-        return PaginatedResponse(data=operadoras, meta=meta)
+        return OperadoraListResponse(data=operadoras, meta=meta)
     
     def buscar_por_cnpj(self, cnpj: str) -> Optional[OperadoraDetailResponse]:
         # Busca operadora por CNPJ

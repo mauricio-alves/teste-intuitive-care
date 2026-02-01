@@ -8,7 +8,7 @@ from app.models import (
     OperadoraDetailResponse,
     DespesasHistoricoResponse,
     EstatisticasResponse,
-    PaginatedResponse
+    OperadoraListResponse
 )
 from app.services import OperadoraService, EstatisticasService
 from app.cache import cache_manager
@@ -41,7 +41,7 @@ async def root():
         "docs": "/docs"
     }
 
-@app.get("/api/operadoras", response_model=PaginatedResponse)
+@app.get("/api/operadoras", response_model=OperadoraListResponse)
 async def listar_operadoras(
     # Parametros de paginação e busca
     page: int = Query(1, ge=1, description="Número da página"),
