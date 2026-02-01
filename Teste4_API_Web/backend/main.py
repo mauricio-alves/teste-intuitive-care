@@ -45,7 +45,6 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Pool de conexões encerrado com sucesso")
     except Exception as e:
         logger.error(f"⚠️ Erro ao fechar o pool: {e}", exc_info=True)
-        raise RuntimeError("Erro ao fechar o pool de conexões")
 
 # Inicialização do App FastAPI
 app = FastAPI(
@@ -70,7 +69,7 @@ estatisticas_service = EstatisticasService()
 
 # Raiz da API
 @app.get("/")
-async def root():
+def root():
     return {
         "message": "ANS Operadoras API",
         "version": "1.0.0",
@@ -79,7 +78,7 @@ async def root():
 
 # Lista operadoras com paginação e busca
 @app.get("/api/operadoras", response_model=OperadoraListResponse)
-async def listar_operadoras(
+def listar_operadoras(
     page: int = Query(1, ge=1, description="Número da página"),
     limit: int = Query(10, ge=1, le=100, description="Itens por página"),
     busca: Optional[str] = Query(
@@ -102,7 +101,7 @@ async def listar_operadoras(
 
 # Retorna detalhes de uma operadora específica
 @app.get("/api/operadoras/{cnpj}", response_model=OperadoraDetailResponse)
-async def detalhe_operadora(
+def detalhe_operadora(
     cnpj: str = Path(..., pattern=r"^\d{14}$", description="CNPJ da operadora. A validação é estritamente de formato (14 dígitos numéricos).")
 ):
     try:
@@ -118,7 +117,7 @@ async def detalhe_operadora(
 
 # Retorna histórico de despesas de uma operadora
 @app.get("/api/operadoras/{cnpj}/despesas", response_model=DespesasHistoricoResponse)
-async def historico_despesas(
+def historico_despesas(
     cnpj: str = Path(..., pattern=r"^\d{14}$", description="CNPJ da operadora. A validação é estritamente de formato (14 dígitos numéricos).")
 ):
     try:
@@ -138,7 +137,7 @@ async def historico_despesas(
 
 # Retorna estatísticas agregadas
 @app.get("/api/estatisticas", response_model=EstatisticasResponse)
-async def estatisticas(background_tasks: BackgroundTasks):
+def estatisticas(background_tasks: BackgroundTasks):
     cache_key = "estatisticas_gerais"
     cached = cache_manager.get(cache_key)
     background_tasks.add_task(cache_manager.cleanup_expired)
@@ -156,7 +155,7 @@ async def estatisticas(background_tasks: BackgroundTasks):
 
 # Retorna distribuição de despesas por UF (para gráfico)
 @app.get("/api/despesas-por-uf", response_model=DespesasPorUF)
-async def despesas_por_uf(background_tasks: BackgroundTasks):
+def despesas_por_uf(background_tasks: BackgroundTasks):
     cache_key = "despesas_por_uf"
     cached = cache_manager.get(cache_key)
     background_tasks.add_task(cache_manager.cleanup_expired)
