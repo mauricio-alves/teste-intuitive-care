@@ -3,77 +3,72 @@ from typing import List, Optional
 from datetime import datetime
 
 class OperadoraBase(BaseModel):
-    # Schema base de operadora
     id: int
-    registro_ans: Optional[str]
+    registro_ans: Optional[str] = None
     cnpj: str
     razao_social: str
-    modalidade: Optional[str]
-    uf: Optional[str]
+    modalidade: Optional[str] = None
+    uf: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class OperadoraListItem(OperadoraBase):
-    # Item da lista de operadoras
-    total_despesas: Optional[float] = Field(None, description="Total de despesas consolidadas")
+    total_despesas: Optional[float] = Field(0.0, description="Total de despesas consolidadas")
 
 class OperadoraDetailResponse(OperadoraBase):
-    # Detalhes completos de uma operadora
-    data_cadastro: Optional[datetime]
-    total_despesas: Optional[float]
-    total_registros: int
-    media_despesas: Optional[float]
+    data_cadastro: Optional[datetime] = None
+    total_despesas: float = 0.0
+    total_registros: int = 0
+    media_despesas: float = 0.0
 
 class DespesaItem(BaseModel):
-    # Item de despesa no histórico
     ano: int
     trimestre: int
-    valor_despesas: float
+    valor_despesas: float = 0.0
     periodo: str
 
+    class Config:
+        from_attributes = True
+
 class DespesasHistoricoResponse(BaseModel):
-    # Histórico de despesas de uma operadora
-    operadora: OperadoraBase
-    despesas: List[DespesaItem]
-    total_registros: int
-    soma_total: float
-    media: float
+    operadora: Optional[OperadoraBase] = None
+    despesas: List[DespesaItem] = []
+    total_registros: int = 0
+    soma_total: float = 0.0
+    media: float = 0.0
 
 class TopOperadoraItem(BaseModel):
-    # Item das top 5 operadoras por despesas
     razao_social: str
-    uf: Optional[str]
-    total_despesas: float
+    uf: Optional[str] = None
+    total_despesas: float = 0.0
 
 class PeriodoAnalise(BaseModel):
-    # Detalhes do período analisado
-    ano_inicial: int
-    ano_final: int
-    trimestre_inicial: int
-    trimestre_final: int
+    ano_inicial: int = 0
+    ano_final: int = 0
+    trimestre_inicial: int = 0
+    trimestre_final: int = 0
 
 class EstatisticasResponse(BaseModel):
-    # Estatísticas gerais do sistema atualizado
-    total_despesas: float
-    media_despesas: float
-    total_operadoras: int
-    total_registros: int
-    top_5_operadoras: List[TopOperadoraItem] 
-    periodo_analise: PeriodoAnalise 
+    total_despesas: float = 0.0
+    media_despesas: float = 0.0
+    total_operadoras: int = 0
+    total_registros: int = 0
+    top_5_operadoras: List[TopOperadoraItem] = []
+    periodo_analise: Optional[PeriodoAnalise] = None
 
 class PaginationMeta(BaseModel):
-    # Metadados de paginação
-    page: int
-    limit: int
-    total: int
-    total_pages: int
-    has_next: bool
-    has_prev: bool
+    page: int = 1
+    limit: int = 10
+    total: int = 0
+    total_pages: int = 0
+    has_next: bool = False
+    has_prev: bool = False
 
 class OperadoraListResponse(BaseModel):
-    # Resposta paginada genérica
-    data: List[OperadoraListItem]
-    meta: PaginationMeta
+    data: List[OperadoraListItem] = []
+    meta: Optional[PaginationMeta] = None
 
 class DespesasPorUF(BaseModel):
-    # Despesas agrupadas por UF
-    ufs: List[str]
-    valores: List[float]
+    ufs: List[str] = []
+    valores: List[float] = []

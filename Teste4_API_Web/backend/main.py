@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Path, BackgroundTasks 
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import get_db_connection
+from app.database import get_db_connection, close_db_pool
 from app.models import (
     OperadoraDetailResponse,
     DespesasHistoricoResponse,
@@ -32,19 +32,21 @@ async def lifespan(app: FastAPI):
         conn = get_db_connection()
         conn.close()
         logger.info("✅ Banco de dados conectado")
+    except HTTPException as http_e:
+        logger.error("❌ Erro HTTP ao conectar ao banco: %s", http_e.detail, exc_info=True)
+        raise RuntimeError(f"Erro de conexão (HTTP {http_e.status_code}): {http_e.detail}")
     except Exception as e:
-        logger.error(f"❌ Erro ao conectar ao banco: {e}", exc_info=True)
+        logger.error("❌ Erro ao conectar ao banco: %s", e, exc_info=True)
         raise RuntimeError("Não foi possível conectar ao banco de dados")
     
     yield
     logger.info("👋 API desligada")
 
     try:
-        from app.database import close_db_pool
         close_db_pool()
         logger.info("✅ Pool de conexões encerrado com sucesso")
     except Exception as e:
-        logger.error(f"⚠️ Erro ao fechar o pool: {e}", exc_info=True)
+        logger.error("⚠️ Erro ao fechar o pool: %s", e, exc_info=True)
 
 # Inicialização do App FastAPI
 app = FastAPI(
@@ -58,9 +60,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["GET"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["*"],
 )
 
 # Serviços
@@ -96,7 +98,7 @@ def listar_operadoras(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao listar operadoras: {e}", exc_info=True)
+        logger.error("❌ Erro ao listar operadoras: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno ao processar lista de operadoras")
 
 # Retorna detalhes de uma operadora específica
@@ -112,7 +114,7 @@ def detalhe_operadora(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao buscar detalhes da operadora {cnpj}: {e}", exc_info=True)
+        logger.error("❌ Erro ao buscar detalhes da operadora: %s", cnpj, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno ao processar detalhes da operadora")
 
 # Retorna histórico de despesas de uma operadora
@@ -126,13 +128,11 @@ def historico_despesas(
         if historico.get('operadora') is None:
             raise HTTPException(status_code=404, detail="Operadora não encontrada")
         
-        if historico['total_registros'] == 0:
-            raise HTTPException(status_code=404, detail="Nenhuma despesa encontrada para esta operadora")
         return historico
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao buscar histórico de despesas da operadora {cnpj}: {e}", exc_info=True)
+        logger.error("❌ Erro ao buscar histórico de despesas da operadora: %s", cnpj, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno ao processar histórico")
 
 # Retorna estatísticas agregadas
@@ -150,7 +150,7 @@ def estatisticas(background_tasks: BackgroundTasks):
         cache_manager.set(cache_key, stats, ttl=CACHE_TTL_DEFAULT)
         return stats
     except Exception as e:
-        logger.error(f"❌ Erro ao calcular estatísticas: {e}", exc_info=True)
+        logger.error("❌ Erro ao calcular estatísticas: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno ao processar estatísticas")
 
 # Retorna distribuição de despesas por UF (para gráfico)
@@ -168,7 +168,7 @@ def despesas_por_uf(background_tasks: BackgroundTasks):
         cache_manager.set(cache_key, result, ttl=CACHE_TTL_DEFAULT)
         return result
     except Exception as e:
-        logger.error(f"❌ Erro ao calcular despesas por UF: {e}", exc_info=True)
+        logger.error("❌ Erro ao calcular despesas por UF: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno ao processar despesas por UF")
 
 if __name__ == "__main__":

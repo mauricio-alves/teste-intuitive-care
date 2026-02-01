@@ -91,7 +91,7 @@ class OperadoraService:
                 COUNT(dc.id) as total_registros,
                 COALESCE(SUM(dc.valor_despesas), 0) as total_despesas,
                 CASE 
-                    WHEN COUNT(dc.id) > 0 THEN SUM(dc.valor_despesas) / COUNT(dc.id)
+                    WHEN COUNT(dc.id) > 0 THEN COALESCE(SUM(dc.valor_despesas) / COUNT(dc.id), 0)
                     ELSE 0 
                 END as media_despesas
             FROM operadoras o

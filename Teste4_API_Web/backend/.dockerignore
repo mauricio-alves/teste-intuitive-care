@@ -5,9 +5,9 @@
 
 # Python
 
-**pycache**/
+\*_/**pycache**/
 _.py[cod]
-_$py.class
+\*$py.class
 .pytest_cache/
 .venv/
 venv/
@@ -15,7 +15,7 @@ venv/
 # Environment and secrets
 
 .env
-*.local
+\*.local
 
 # Documentation and IDEs
 
