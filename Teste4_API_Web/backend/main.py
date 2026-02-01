@@ -1,11 +1,10 @@
-from fastapi import FastAPI, HTTPException, Query, Path, BackgroundTasks 
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+import uvicorn
 import logging
 from typing import Optional
-import uvicorn
-
 from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Query, Path, BackgroundTasks 
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.database import get_db_connection
 from app.models import (
     OperadoraDetailResponse,
@@ -17,23 +16,29 @@ from app.models import (
 from app.services import OperadoraService, EstatisticasService
 from app.cache import cache_manager
 
+# Configuração de Logs básica
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+CACHE_TTL_DEFAULT = 300
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Eventos de startup/shutdown
     logger.info("🚀 API iniciada com sucesso!")
     logger.info("📊 Conectando ao banco de dados...")
     try:
-        from app.database import get_db_connection
         conn = get_db_connection()
         conn.close()
         logger.info("✅ Banco de dados conectado")
     except Exception as e:
         logger.error(f"❌ Erro ao conectar ao banco: {e}")
+        raise RuntimeError("Não foi possível conectar ao banco de dados")
     
     yield
     logger.info("👋 API desligada")
 
-# Criação da aplicação FastAPI com lifespan
+# Inicialização do App FastAPI
 app = FastAPI(
     title="ANS Operadoras API",
     description="API para consulta de dados de operadoras de planos de saúde",
@@ -54,12 +59,6 @@ app.add_middleware(
 operadora_service = OperadoraService()
 estatisticas_service = EstatisticasService()
 
-# Configuração de Logs básica
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-CACHE_TTL_DEFAULT = 300
-
 @app.get("/")
 async def root():
     # Raiz da API
@@ -71,7 +70,7 @@ async def root():
 
 @app.get("/api/operadoras", response_model=OperadoraListResponse)
 async def listar_operadoras(
-    # Parametros de paginação e busca
+    # Parâmetros de paginação e busca
     page: int = Query(1, ge=1, description="Número da página"),
     limit: int = Query(10, ge=1, le=100, description="Itens por página"),
     busca: Optional[str] = Query(None, description="Busca por razão social ou CNPJ")

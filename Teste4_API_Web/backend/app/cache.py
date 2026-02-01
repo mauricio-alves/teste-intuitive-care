@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 
 class CacheManager:
-    # Gerenciador simples de cache em memória com expiração
+    # Gerenciador simples de cache em memória com expiração, restrita a um único processo (Single Worker)
     def __init__(self):
         self._cache = {}
         self._lock = Lock()

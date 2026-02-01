@@ -1,3 +1,4 @@
+from http.client import HTTPException
 from psycopg2.extras import RealDictCursor
 import os
 from typing import Optional
@@ -23,7 +24,10 @@ def get_db_pool() -> pool.SimpleConnectionPool:
     return db_pool
 
 def get_db_connection():
-    return get_db_pool().getconn()
+    try:
+        return get_db_pool().getconn()
+    except PoolError:
+        raise HTTPException(status_code=503, detail="Servidor sobrecarregado (limite de conexões atingido). Tente novamente em instantes.")
 
 def release_db_connection(conn):
     get_db_pool().putconn(conn)
@@ -51,5 +55,8 @@ def execute_query_with_count(query: str, count_query: str, params: Optional[tupl
             cursor.execute(count_query, count_params if count_params is not None else (params or ()))
             count = cursor.fetchone()['count']
             return results, count
+    except Exception as e:
+        conn.rollback()
+        raise e
     finally:
         release_db_connection(conn)
