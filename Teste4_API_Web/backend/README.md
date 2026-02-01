@@ -185,7 +185,17 @@ query = "... LIMIT %s OFFSET %s"
 }
 ```
 
-## 📊 Dependências
+## ⚡ Performance Esperada
+
+| Endpoint               | Sem Cache | Com Cache | Melhoria |
+| ---------------------- | --------- | --------- | -------- |
+| `/api/estatisticas`    | ~3s       | ~50ms     | 60x      |
+| `/api/despesas-por-uf` | ~1.5s     | ~30ms     | 50x      |
+| `/api/operadoras`      | ~200ms    | N/A       | -        |
+
+---
+
+## 🎯 Tecnologias
 
 - **FastAPI:** Framework web moderno
 - **Uvicorn:** ASGI server
@@ -200,13 +210,3 @@ query = "... LIMIT %s OFFSET %s"
 - Validação automática com Pydantic
 - Sanitização de inputs SQL (parametrização)
 - Rate limiting (futuro: adicionar middleware)
-
----
-
-## ⚡ Performance
-
-| Endpoint               | Sem Cache | Com Cache | Melhoria |
-| ---------------------- | --------- | --------- | -------- |
-| `/api/estatisticas`    | ~3s       | ~50ms     | 60x      |
-| `/api/despesas-por-uf` | ~1.5s     | ~30ms     | 50x      |
-| `/api/operadoras`      | ~200ms    | N/A       | -        |
