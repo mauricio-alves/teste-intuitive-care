@@ -1,5 +1,6 @@
-import axios, { AxiosError } from "axios";
-import type { Operadora, OperadoraDetail, DespesasHistorico, Estatisticas, DespesasPorUF, PaginatedResponse, ApiError } from "@/types";
+import axios from "axios";
+import type { Operadora, OperadoraDetail, DespesasHistorico, Estatisticas, DespesasPorUF, PaginatedResponse } from "@/types";
+import { useUI } from "@/composables/useUI";
 
 // Configuração da instância do Axios
 const api = axios.create({
@@ -10,17 +11,39 @@ const api = axios.create({
   },
 });
 
-// Interceptor para tratar erros globalmente
+const { setLoading, setError } = useUI();
+
+// Interceptors para gerenciar loading e erros globalmente
+api.interceptors.request.use(
+  (config) => {
+    setLoading(true);
+    return config;
+  },
+  (error) => {
+    setLoading(false);
+    return Promise.reject(error);
+  },
+);
+
 api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError<ApiError>) => {
+  (response) => {
+    setLoading(false);
+    return response;
+  },
+  (error) => {
+    setLoading(false);
+
+    let message = "Ocorreu um erro inesperado. Tente novamente mais tarde.";
+
     if (error.response) {
-      throw new Error(error.response.data.detail || "Erro no servidor");
+      const apiError = error.response.data as { detail?: string };
+      message = apiError.detail || `Erro ${error.response.status}: Falha na comunicação com o servidor.`;
     } else if (error.request) {
-      throw new Error("Erro de conexão. Verifique se o servidor está rodando.");
-    } else {
-      throw new Error("Erro desconhecido");
+      message = "Não foi possível conectar ao servidor. Verifique sua conexão.";
     }
+
+    setError(message);
+    return Promise.reject(error);
   },
 );
 

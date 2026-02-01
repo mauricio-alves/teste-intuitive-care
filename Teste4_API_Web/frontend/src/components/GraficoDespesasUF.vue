@@ -3,8 +3,10 @@
     <h3>Distribuição de Despesas por UF</h3>
 
     <div v-if="loading" class="loading">Carregando gráfico...</div>
-    <div v-else-if="error" class="erro">{{ error }}</div>
-    <canvas v-else ref="chartCanvas"></canvas>
+    <div v-if="error" class="erro">{{ error }}</div>
+    <div v-show="!loading && !error" style="height: 400px; position: relative">
+      <canvas ref="chartCanvas"></canvas>
+    </div>
   </div>
 </template>
 
@@ -23,7 +25,6 @@ const error = ref<string | null>(null);
 onMounted(async () => {
   try {
     const data = await apiService.buscarDespesasPorUF();
-
     if (!chartCanvas.value) return;
 
     new Chart(chartCanvas.value, {
@@ -68,6 +69,8 @@ onMounted(async () => {
     loading.value = false;
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Erro ao carregar gráfico";
+    loading.value = false;
+  } finally {
     loading.value = false;
   }
 });

@@ -1,10 +1,22 @@
 <template>
-  <div id="app">
+  <div class="app-container">
+    <div v-if="loading" class="global-loader"></div>
+
+    <transition name="fade">
+      <div v-if="error.message" :class="['global-alert', error.type]">
+        {{ error.message }}
+        <button @click="error.message = null">&times;</button>
+      </div>
+    </transition>
+
     <router-view />
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useUI } from "@/composables/useUI";
+const { loading, error } = useUI();
+</script>
 
 <style>
 * {
@@ -22,5 +34,45 @@ body {
 
 #app {
   min-height: 100vh;
+}
+
+.global-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #42b983;
+  z-index: 9999;
+  animation: loading-bar 2s infinite linear;
+}
+
+.global-alert {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  color: white;
+  z-index: 9998;
+  display: flex;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.error {
+  background-color: #ff5252;
+}
+.warning {
+  background-color: #fb8c00;
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>
