@@ -1,0 +1,221 @@
+{
+  "info": {
+    "name": "ANS Operadoras API",
+    "description": "Coleção Postman para API de Operadoras de Planos de Saúde",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Listar Operadoras",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/operadoras?page=1&limit=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "operadoras"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Número da página"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Itens por página"
+            }
+          ]
+        },
+        "description": "Lista operadoras com paginação"
+      },
+      "response": [
+        {
+          "name": "Sucesso",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/operadoras?page=1&limit=10"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"registro_ans\": \"123456\",\n      \"cnpj\": \"12345678000190\",\n      \"razao_social\": \"UNIMED RIO\",\n      \"modalidade\": \"Cooperativa Médica\",\n      \"uf\": \"RJ\",\n      \"total_despesas\": 1000000.50\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 1500,\n    \"total_pages\": 150,\n    \"has_next\": true,\n    \"has_prev\": false\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Listar Operadoras com Busca",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/operadoras?page=1&limit=10&busca=UNIMED",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "operadoras"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "busca",
+              "value": "UNIMED",
+              "description": "Busca por razão social ou CNPJ"
+            }
+          ]
+        },
+        "description": "Lista operadoras filtrando por termo de busca"
+      }
+    },
+    {
+      "name": "Detalhes da Operadora",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/operadoras/{{cnpj}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "operadoras", "{{cnpj}}"]
+        },
+        "description": "Retorna detalhes de uma operadora específica"
+      },
+      "response": [
+        {
+          "name": "Sucesso",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/operadoras/12345678000190"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": 1,\n  \"registro_ans\": \"123456\",\n  \"cnpj\": \"12345678000190\",\n  \"razao_social\": \"UNIMED RIO\",\n  \"modalidade\": \"Cooperativa Médica\",\n  \"uf\": \"RJ\",\n  \"data_cadastro\": \"2020-01-15T10:30:00\",\n  \"total_despesas\": 5000000.75,\n  \"total_registros\": 12,\n  \"media_despesas\": 416666.73\n}"
+        },
+        {
+          "name": "Não Encontrado",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/operadoras/99999999999999"
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"detail\": \"Operadora não encontrada\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Histórico de Despesas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/operadoras/{{cnpj}}/despesas",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "operadoras", "{{cnpj}}", "despesas"]
+        },
+        "description": "Retorna histórico de despesas de uma operadora"
+      },
+      "response": [
+        {
+          "name": "Sucesso",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/operadoras/12345678000190/despesas"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"operadora\": {\n    \"id\": 1,\n    \"registro_ans\": \"123456\",\n    \"cnpj\": \"12345678000190\",\n    \"razao_social\": \"UNIMED RIO\",\n    \"modalidade\": \"Cooperativa Médica\",\n    \"uf\": \"RJ\"\n  },\n  \"despesas\": [\n    {\n      \"ano\": 2024,\n      \"trimestre\": 1,\n      \"valor_despesas\": 1200000.50,\n      \"periodo\": \"2024-T1\"\n    },\n    {\n      \"ano\": 2024,\n      \"trimestre\": 2,\n      \"valor_despesas\": 1350000.75,\n      \"periodo\": \"2024-T2\"\n    }\n  ],\n  \"total_registros\": 2,\n  \"soma_total\": 2550000.25,\n  \"media\": 1275000.13\n}"
+        }
+      ]
+    },
+    {
+      "name": "Estatísticas Gerais",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/estatisticas",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "estatisticas"]
+        },
+        "description": "Retorna estatísticas agregadas (com cache de 5min)"
+      },
+      "response": [
+        {
+          "name": "Sucesso",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/estatisticas"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"total_despesas\": 17287493813595.46,\n  \"media_despesas\": 8154963.58,\n  \"total_operadoras\": 773,\n  \"total_registros\": 2119622,\n  \"top_5_operadoras\": [\n    {\n      \"razao_social\": \"UNIMED RIO\",\n      \"uf\": \"RJ\",\n      \"total_despesas\": 75534587114.68\n    }\n  ],\n  \"periodo_analise\": {\n    \"ano_inicial\": 2024,\n    \"ano_final\": 2024,\n    \"trimestre_inicial\": 1,\n    \"trimestre_final\": 3\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Despesas por UF",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/despesas-por-uf",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "despesas-por-uf"]
+        },
+        "description": "Retorna despesas agregadas por UF (para gráfico)"
+      },
+      "response": [
+        {
+          "name": "Sucesso",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/despesas-por-uf"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"ufs\": [\"SP\", \"RJ\", \"CE\", \"MG\", \"DF\"],\n  \"valores\": [6983265404175.64, 4014316912218.58, 1566134399655.60, 1073428968526.78, 726215791318.88]\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "cnpj",
+      "value": "12345678000190",
+      "type": "string"
+    }
+  ]
+}
