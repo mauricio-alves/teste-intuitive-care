@@ -8,7 +8,7 @@
 
 - Arquivo `.env` é **OBRIGATÓRIO** ao usar Docker
 
-### Opção 1: Docker em Mac/Windows (Recomendado)
+### Opção 1: Docker (Recomendado)
 
 ```bash
 # Build e execução completa
@@ -201,6 +201,20 @@ npm run preview
 
 ---
 
+## ⚡ Features Adicionais Implementadas
+
+- ✅ Loading global automático (useUI composable)
+- ✅ Notificações de erro com auto-dismiss (5s)
+- ✅ Interceptors Axios para tratamento centralizado
+- ✅ Contador de requisições pendentes
+- ✅ Mensagens de erro contextuais
+- ✅ Flags: showGlobalAlert, showGlobalLoading
+- ✅ Parsing automático de erros FastAPI
+- ✅ Proxy Vite para /api
+- ✅ Formatação inteligente (B/M/K)
+
+---
+
 ## 🎯 Tecnologias
 
 - **Vue.js 3:** Framework progressivo para construção de interfaces e Single Page Applications
@@ -229,3 +243,7 @@ npm run preview
 | Page Navigation    | ~100ms |
 | API Calls (cached) | ~50ms  |
 | Bundle Size        | ~200KB |
+
+```
+
+```
