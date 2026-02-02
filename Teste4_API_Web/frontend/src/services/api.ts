@@ -79,17 +79,17 @@ export const apiService = {
   },
 
   async buscarHistoricoDespesas(cnpj: string): Promise<DespesasHistorico> {
-    const { data } = await api.get(`/api/operadoras/${cnpj}/despesas`);
+    const { data } = await api.get(`/api/operadoras/${cnpj}/despesas`, { showGlobalAlert: false });
     return data;
   },
 
   async buscarEstatisticas(): Promise<Estatisticas> {
-    const { data } = await api.get("/api/estatisticas");
+    const { data } = await api.get("/api/estatisticas", { showGlobalAlert: false });
     return data;
   },
 
   async buscarDespesasPorUF(): Promise<DespesasPorUF> {
-    const { data } = await api.get("/api/despesas-por-uf");
+    const { data } = await api.get("/api/despesas-por-uf", { showGlobalAlert: false });
     return data;
   },
 };

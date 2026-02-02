@@ -47,6 +47,7 @@ onMounted(async () => {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             display: true,
@@ -69,9 +70,8 @@ onMounted(async () => {
         },
       },
     });
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : "Erro ao carregar gráfico";
-    loading.value = false;
+  } catch (err: any) {
+    error.value = err.message || "Erro ao carregar gráfico";
   } finally {
     loading.value = false;
   }
