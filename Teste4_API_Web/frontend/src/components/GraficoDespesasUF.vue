@@ -1,10 +1,9 @@
 <template>
   <div class="grafico-container">
     <h3>Distribuição de Despesas por UF</h3>
-
     <div v-if="loading" class="loading">Carregando gráfico...</div>
-    <div v-if="error" class="erro">{{ error }}</div>
-    <div v-show="!loading && !error" style="height: 400px; position: relative">
+    <div v-else-if="error" class="erro">{{ error }}</div>
+    <div v-else style="height: 400px; position: relative">
       <canvas ref="chartCanvas"></canvas>
     </div>
   </div>
