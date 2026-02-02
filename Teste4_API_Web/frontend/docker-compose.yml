@@ -1,0 +1,23 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ans_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:?Variável não definida no .env}
+    volumes:
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - ans_network
+
+networks:
+  ans_network:
+    name: ans_network
+    driver: bridge
