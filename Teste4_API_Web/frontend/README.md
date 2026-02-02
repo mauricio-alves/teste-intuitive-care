@@ -8,7 +8,7 @@
 
 - Arquivo `.env` é **OBRIGATÓRIO** ao usar Docker
 
-### Opção 1: Docker (Recomendado)
+### Opção 1: Docker em Mac/Windows (Recomendado)
 
 ```bash
 # Build e execução completa
@@ -18,10 +18,10 @@ docker-compose up --build
 docker build -t ans-frontend .
 
 # Executar (modo desenvolvimento com hot reload)
-docker run -p 5173:5173 -v ${PWD}/src:/app/src:ro -v ${PWD}/public:/app/public:ro -e VITE_API_URL=http://localhost:8000 ans-frontend
+docker run -p 5173:5173 -v ${PWD}/src:/app/src:ro -v ${PWD}/public:/app/public:ro -e VITE_API_URL=http://host.docker.internal:8000 ans-frontend
 
 # Executar sem volumes (sem hot reload)
-docker run -p 5173:5173 -e VITE_API_URL=http://localhost:8000 ans-frontend
+docker run -p 5173:5173 -e VITE_API_URL=http://host.docker.internal:8000 ans-frontend
 
 # Ver logs
 docker-compose logs -f frontend

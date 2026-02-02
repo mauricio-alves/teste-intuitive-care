@@ -19,13 +19,14 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      host: true,
+      host: env.VITE_API_URL ? true : "localhost",
       proxy: {
         "/api": proxyConfig,
       },
     },
     preview: {
       port: 5173,
+      host: env.VITE_API_URL ? true : "localhost",
       proxy: {
         "/api": proxyConfig,
       },

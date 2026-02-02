@@ -1,15 +1,19 @@
 <template>
   <div class="app-container">
-    <div v-if="loading" class="global-loader"></div>
+    <div v-if="loading" class="loader-overlay">
+      <div class="loader"></div>
+    </div>
 
     <transition name="fade">
-      <div v-if="error.message" :class="['global-alert', error.type]">
-        {{ error.message }}
-        <button @click="clearError">&times;</button>
+      <div v-if="error.message" :class="['global-alert', error.type]" role="alert" aria-live="assertive">
+        <span>{{ error.message }}</span>
+        <button type="button" class="close-btn" aria-label="Fechar alerta" @click="clearError">&times;</button>
       </div>
     </transition>
 
-    <router-view />
+    <main>
+      <router-view />
+    </main>
   </div>
 </template>
 

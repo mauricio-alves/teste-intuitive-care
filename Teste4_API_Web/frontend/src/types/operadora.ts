@@ -12,4 +12,5 @@ export interface OperadoraDetail extends Operadora {
   data_cadastro: string | null;
   total_registros: number;
   media_despesas: number;
+  total_despesas: number;
 }

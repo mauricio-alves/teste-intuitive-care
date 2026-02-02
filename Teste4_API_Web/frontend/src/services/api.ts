@@ -3,7 +3,7 @@ import type { Operadora, OperadoraDetail, DespesasHistorico, Estatisticas, Despe
 import { useUI } from "@/composables/useUI";
 
 const api = axios.create({
-  baseURL: "",
+  baseURL: import.meta.env.VITE_API_URL || "",
   timeout: 10000,
 });
 
@@ -48,7 +48,10 @@ api.interceptors.response.use(
       message = "Não foi possível conectar ao servidor. Verifique sua conexão.";
     }
 
-    setError(message);
+    if (error.config?.showGlobalAlert !== false) {
+      setError(message);
+    }
+
     error.message = message;
     return Promise.reject(error);
   },
@@ -60,12 +63,12 @@ export const apiService = {
     const params: { page: number; limit: number; busca?: string } = { page, limit };
     if (busca) params.busca = busca;
 
-    const { data } = await api.get("/api/operadoras", { params });
+    const { data } = await api.get("/api/operadoras", { params, showGlobalAlert: false } as any);
     return data;
   },
 
   async buscarOperadora(cnpj: string): Promise<OperadoraDetail> {
-    const { data } = await api.get(`/api/operadoras/${cnpj}`);
+    const { data } = await api.get(`/api/operadoras/${cnpj}`, { showGlobalAlert: false } as any);
     return data;
   },
 

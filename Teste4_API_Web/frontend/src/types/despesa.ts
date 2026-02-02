@@ -8,7 +8,7 @@ export interface DespesaItem {
 }
 
 export interface DespesasHistorico {
-  operadora: Operadora;
+  operadora: Operadora | null;
   despesas: DespesaItem[];
   total_registros: number;
   soma_total: number;
