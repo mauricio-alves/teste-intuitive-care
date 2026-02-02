@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
-    <div v-if="loading" class="loader-overlay">
-      <div class="loader"></div>
+    <div v-if="loading" class="global-loader-container">
+      <div class="global-loader"></div>
     </div>
 
     <transition name="fade">
@@ -40,6 +40,19 @@ body {
   min-height: 100vh;
 }
 
+.global-loader-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
 .global-loader {
   position: fixed;
   top: 0;
@@ -52,16 +65,39 @@ body {
 }
 
 .global-alert {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px 20px;
-  border-radius: 8px;
-  color: white;
-  z-index: 9998;
   display: flex;
-  gap: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  margin: 1rem;
+  border-radius: 4px;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10000;
+  min-width: 300px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.global-alert.error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+.global-alert.warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .error {
@@ -69,6 +105,23 @@ body {
 }
 .warning {
   background-color: #fb8c00;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: inherit;
+  padding: 0 0.5rem;
+  line-height: 1;
+  margin-left: 1rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.close-btn:hover {
+  opacity: 1;
 }
 
 @keyframes loading-bar {
