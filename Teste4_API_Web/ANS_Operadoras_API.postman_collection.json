@@ -79,7 +79,26 @@
           ]
         },
         "description": "Lista operadoras filtrando por termo de busca"
-      }
+      },
+      "response": [
+        {
+          "name": "Sucesso",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/operadoras?page=1&limit=10&busca=UNIMED"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"registro_ans\": \"123456\",\n      \"cnpj\": \"12345678000190\",\n      \"razao_social\": \"UNIMED RIO\",\n      \"modalidade\": \"Cooperativa Médica\",\n      \"uf\": \"RJ\",\n      \"total_despesas\": 75534587114.68\n    },\n    {\n      \"id\": 2,\n      \"registro_ans\": \"234567\",\n      \"cnpj\": \"23456789000101\",\n      \"razao_social\": \"UNIMED SÃO PAULO\",\n      \"modalidade\": \"Cooperativa Médica\",\n      \"uf\": \"SP\",\n      \"total_despesas\": 89234567890.12\n    },\n    {\n      \"id\": 3,\n      \"registro_ans\": \"345678\",\n      \"cnpj\": \"34567890000112\",\n      \"razao_social\": \"UNIMED BELO HORIZONTE\",\n      \"modalidade\": \"Cooperativa Médica\",\n      \"uf\": \"MG\",\n      \"total_despesas\": 42156789012.34\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 45,\n    \"total_pages\": 5,\n    \"has_next\": true,\n    \"has_prev\": false\n  }\n}"
+        }
+      ]
     },
     {
       "name": "Detalhes da Operadora",
