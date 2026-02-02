@@ -5,6 +5,7 @@ import { useUI } from "@/composables/useUI";
 declare module "axios" {
   export interface AxiosRequestConfig {
     showGlobalAlert?: boolean;
+    showGlobalLoading?: boolean;
   }
 }
 
@@ -29,7 +30,9 @@ const handleResponse = () => {
 
 api.interceptors.request.use(
   (config) => {
-    handleRequest();
+    if (config.showGlobalLoading !== false) {
+      handleRequest();
+    }
     return config;
   },
   (error) => {
@@ -40,16 +43,33 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    handleResponse();
+    if (response.config.showGlobalLoading !== false) {
+      handleResponse();
+    }
     return response;
   },
   (error) => {
-    handleResponse();
+    if (error.config?.showGlobalLoading !== false) {
+      handleResponse();
+    }
     let message = "Ocorreu um erro inesperado. Tente novamente mais tarde.";
 
     if (error.response) {
-      const apiError = error.response.data as { detail?: string };
-      message = apiError.detail || `Erro ${error.response.status}: Falha na comunicação com o servidor.`;
+      const detail = error.response.data?.detail;
+
+      if (typeof detail === "string") {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        const msgs = detail.map((item: any) => (item && typeof item.msg === "string" ? item.msg : null)).filter((msg): msg is string => !!msg);
+
+        if (msgs.length > 0) {
+          message = `Erro de validação: ${msgs.join("; ")}`;
+        } else {
+          message = `Erro ${error.response.status}: Dados inválidos enviados ao servidor.`;
+        }
+      } else {
+        message = `Erro ${error.response.status}: Falha na comunicação com o servidor.`;
+      }
     } else if (error.request) {
       message = "Não foi possível conectar ao servidor. Verifique sua conexão.";
     }

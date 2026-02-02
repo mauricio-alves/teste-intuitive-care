@@ -1,11 +1,14 @@
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 // Formata número como moeda brasileira
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+export function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "R$ 0,00";
+  return currencyFormatter.format(value);
 }
 
 // Formata CNPJ (14 dígitos)

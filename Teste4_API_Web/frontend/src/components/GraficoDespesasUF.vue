@@ -27,8 +27,13 @@ onMounted(async () => {
   try {
     const data = await apiService.buscarDespesasPorUF();
 
+    loading.value = false;
     await nextTick();
-    if (!chartCanvas.value) return;
+
+    if (!chartCanvas.value) {
+      console.error("Canvas não encontrado no DOM");
+      return;
+    }
 
     chartInstance = new Chart(chartCanvas.value, {
       type: "bar",
@@ -71,7 +76,6 @@ onMounted(async () => {
     });
   } catch (err: any) {
     error.value = err.message || "Erro ao carregar gráfico";
-  } finally {
     loading.value = false;
   }
 });

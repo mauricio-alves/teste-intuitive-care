@@ -2,7 +2,16 @@
   <div class="home-page">
     <h1>Operadoras de Planos de Saúde - ANS</h1>
 
-    <div v-if="!loadingStats && estatisticas" class="cards-container">
+    <div v-if="loading" class="loading-stats">
+      <p>Carregando indicadores...</p>
+    </div>
+
+    <div v-else-if="error" class="error-stats">
+      <p>⚠️ {{ error }}</p>
+      <button @click="carregarEstatisticas" class="btn-retry">Tentar novamente</button>
+    </div>
+
+    <div v-else-if="estatisticas" class="cards-container">
       <div class="card">
         <h3>Total Despesas</h3>
         <p class="valor-grande">{{ formatCurrency(estatisticas.total_despesas) }}</p>
@@ -32,7 +41,7 @@ import GraficoDespesasUF from "@/components/GraficoDespesasUF.vue";
 import { useEstatisticas } from "@/composables/useEstatisticas";
 import { formatCurrency } from "@/utils/formatters";
 
-const { estatisticas, loading: loadingStats, carregarEstatisticas } = useEstatisticas();
+const { estatisticas, loading, error, carregarEstatisticas } = useEstatisticas();
 
 onMounted(() => {
   carregarEstatisticas();
@@ -77,5 +86,34 @@ h1 {
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
+}
+
+.loading-stats,
+.error-stats {
+  padding: 2rem;
+  text-align: center;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.error-stats {
+  border: 1px solid #f87171;
+  color: #991b1b;
+}
+
+.btn-retry {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-retry:hover {
+  background-color: #dc2626;
 }
 </style>
