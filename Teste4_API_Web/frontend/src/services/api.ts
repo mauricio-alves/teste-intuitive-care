@@ -57,7 +57,7 @@ api.interceptors.response.use(
 // Serviços da API
 export const apiService = {
   async listarOperadoras(page: number = 1, limit: number = 10, busca?: string): Promise<PaginatedResponse<Operadora>> {
-    const params: any = { page, limit };
+    const params: { page: number; limit: number; busca?: string } = { page, limit };
     if (busca) params.busca = busca;
 
     const { data } = await api.get("/api/operadoras", { params });
