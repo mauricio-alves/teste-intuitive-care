@@ -157,6 +157,40 @@ TESTE-INTUITIVE-CARE/
 
 **Download:** [📥 Coleção Postman](./Teste4_API_Web/ANS_Operadoras_API.postman_collection.json)
 
+---
+
+## 🚀 Execução Rápida
+
+### Pré-requisitos
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- Git
+
+### Executar Teste Específico
+
+```bash
+# Teste 1 - Pipeline ETL
+cd Teste1_ANS_Integration
+docker-compose up --build
+
+# Teste 2 - Transformação
+cd Teste2_Transformacao
+docker-compose up --build
+
+# Teste 3 - Banco de Dados
+cd Teste3_Banco_Dados
+docker-compose up --build
+
+# Teste 4 - API + Web
+cd Teste4_API_Web
+docker-compose up --build
+# Acesse: http://localhost:5173 (Frontend)
+# Acesse: http://localhost:8000/docs (API Swagger)
+```
+
+---
+
 ## 📊 Dados Processados
 
 | Métrica                | Valor            |
@@ -215,6 +249,46 @@ TESTE-INTUITIVE-CARE/
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 📈 Performance
+
+| Componente            | Métrica         | Valor                    |
+| --------------------- | --------------- | ------------------------ |
+| **Pipeline ETL**      | Processamento   | ~30 min (2,1M registros) |
+| **Pandas Agregação**  | Transformação   | ~5 min                   |
+| **PostgreSQL Import** | Carga de Dados  | ~10 min                  |
+| **API (sem cache)**   | Estatísticas    | ~3s                      |
+| **API (com cache)**   | Estatísticas    | <10ms (>300x)            |
+| **Frontend**          | First Load      | ~500ms                   |
+| **Frontend**          | Page Navigation | ~100ms                   |
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+### Backend
+
+- **Python 3.11+** - Linguagem principal
+- **FastAPI** - Framework web moderno
+- **Pandas** - Análise e transformação de dados
+- **PostgreSQL 14** - Banco de dados relacional
+- **Docker** - Containerização
+
+### Frontend
+
+- **Vue.js 3** - Framework progressivo
+- **TypeScript** - Tipagem estática
+- **Vite** - Build tool
+- **Chart.js** - Gráficos interativos
+- **Axios** - Cliente HTTP
+
+### DevOps
+
+- **Docker Compose** - Orquestração de containers
+- **pgAdmin 4** - Administração PostgreSQL
+- **Postman** - Testes de API
 
 ---
 
